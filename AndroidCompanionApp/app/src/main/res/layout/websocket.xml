@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0B0D12"
+    android:padding="20dp">
+
+    <!-- TITLE -->
+
+    <TextView
+        android:id="@+id/lobby_type_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="#FFFFFF"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.504"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/qrSection" />
+
+    <TextView
+        android:id="@+id/textTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RIFT BORN"
+        android:textColor="#FFFFFF"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- ===================== -->
+    <!-- QR CONNECT SECTION     -->
+    <!-- ===================== -->
+
+    <LinearLayout
+        android:id="@+id/qrSection"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="18dp"
+        android:background="@drawable/card_bg"
+        app:layout_constraintTop_toBottomOf="@id/textTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CONNECT"
+            android:textColor="#888888"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:id="@+id/textConnectionStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Waiting for QR Scan..."
+            android:textColor="#FF5555"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp"/>
+
+        <Button
+            android:id="@+id/buttonScanQr"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="SCAN QR CODE"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#1E88E5"
+            android:layout_marginTop="12dp"/>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="336dp"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
+
+    <!-- ===================== -->
+    <!-- WAITING SECTION       -->
+    <!-- ===================== -->
+
+    <LinearLayout
+        android:id="@+id/waitingSection"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="20dp"
+        android:background="@drawable/card_bg"
+        app:layout_constraintTop_toBottomOf="@id/qrSection"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp">
+
+        <TextView
+            android:id="@+id/textWaiting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Waiting for Server Mode..."
+            android:textColor="#BBBBBB"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <!-- ===================== -->
+    <!-- BLIND PICK SECTION    -->
+    <!-- ===================== -->
+
+    <LinearLayout
+        android:id="@+id/blindPickSection"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:padding="18dp"
+        android:background="@drawable/card_bg"
+        app:layout_constraintTop_toBottomOf="@id/qrSection"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BLIND PICK"
+            android:textColor="#888888"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Choose 3 Resonances"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp"/>
+
+        <GridLayout
+            android:id="@+id/gridBlindPick"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:useDefaultMargins="true"
+            android:layout_marginTop="12dp"/>
+    </LinearLayout>
+
+    <!-- ===================== -->
+    <!-- DRAFT PICK SECTION    -->
+    <!-- ===================== -->
+
+    <LinearLayout
+        android:id="@+id/draftPickSection"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:padding="18dp"
+        android:background="@drawable/card_bg"
+        app:layout_constraintTop_toBottomOf="@id/qrSection"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DRAFT MODE"
+            android:textColor="#888888"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Draft Phase"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp"/>
+
+        <TextView
+            android:id="@+id/textDraftInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Waiting for opponent move..."
+            android:textColor="#BBBBBB"
+            android:layout_marginTop="8dp"/>
+    </LinearLayout>
+
+    <!-- ===================== -->
+    <!-- START BUTTON          -->
+    <!-- ===================== -->
+
+    <Button
+        android:id="@+id/buttonStartGame"
+        android:layout_width="0dp"
+        android:layout_height="64dp"
+        android:backgroundTint="#6b6b6b"
+        android:enabled="false"
+        android:text="READY"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/pick_frame"
+        android:layout_width="369dp"
+        android:layout_height="356dp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonStartGame"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/lobby_type_text">
+
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
