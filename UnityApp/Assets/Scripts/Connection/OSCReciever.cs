@@ -1,8 +1,10 @@
+using System;
 using UnityEngine;
 using uOSC;
 
 public class OSCReceiver : MonoBehaviour
 {
+    public Action<Quaternion> OnRotation;
     void Start()
     {
         var server = GetComponent<uOscServer>();
@@ -33,9 +35,10 @@ public class OSCReceiver : MonoBehaviour
                 float z = (float)message.values[2];
                 float w = (float)message.values[3];
 
-                Quaternion phoneRotation = new Quaternion(x, y, z, w);
+                // Swap Y and Z, and adjust signs for Left-Handed Unity space
+                Quaternion unityQ = new Quaternion(x, z, y, -w);
 
-                Debug.Log(phoneRotation);
+                OnRotation?.Invoke(unityQ);
                 break;
             }
 

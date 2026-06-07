@@ -26,7 +26,7 @@ DisplayQRCodes();
         // Assign index + 1 as the Player ID (e.g., Player1, Player2)
         string url = serverIP;
 
-        Texture2D qrTex = GenerateQR(url);
+        Texture2D qrTex = GenerateQR("simpconnect://connect?ip="+url+"&port=9000");  
         qrSlotImage.texture = qrTex;
 
         Debug.Log($"QR Code generated: {url}");
@@ -80,7 +80,7 @@ DisplayQRCodes();
 
         byte[] qrBytes = qrCode.GetGraphic(20);
 
-        Texture2D tex = new Texture2D(256, 256);
+        Texture2D tex = new Texture2D(512, 512);
         tex.LoadImage(qrBytes);
         return tex;
     }
