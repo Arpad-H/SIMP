@@ -220,46 +220,31 @@ public class SquirrelController : MonoBehaviour
 
     private void MoveAlongSurface(Vector2 moveInput)
     {
-        Vector3 referenceForward;
-        Vector3 referenceRight;
-
-        if (cameraTransform != null)
+        // A / D rotate around the current surface normal.
+        if (Mathf.Abs(moveInput.x) > 0.01f)
         {
-            referenceForward = Vector3.ProjectOnPlane(cameraTransform.forward, surfaceNormal).normalized;
-            referenceRight = Vector3.ProjectOnPlane(cameraTransform.right, surfaceNormal).normalized;
-        }
-        else
-        {
-            referenceForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal).normalized;
-            referenceRight = Vector3.ProjectOnPlane(transform.right, surfaceNormal).normalized;
+            float yawAmount = moveInput.x * turnSpeed * 40f * Time.deltaTime;
+            transform.Rotate(surfaceNormal, yawAmount, Space.World);
         }
 
-        if (referenceForward.sqrMagnitude < 0.001f)
-            referenceForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal).normalized;
+        // Forward/backward movement is based on the squirrel's own facing direction.
+        Vector3 moveForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal).normalized;
 
-        if (referenceRight.sqrMagnitude < 0.001f)
-            referenceRight = Vector3.Cross(surfaceNormal, referenceForward).normalized;
+        if (moveForward.sqrMagnitude < 0.001f && cameraTransform != null)
+        {
+            moveForward = Vector3.ProjectOnPlane(cameraTransform.forward, surfaceNormal).normalized;
+        }
 
-        Vector3 moveDirection =
-            referenceForward * moveInput.y +
-            referenceRight * moveInput.x;
+        if (moveForward.sqrMagnitude < 0.001f)
+            return;
 
-        if (moveDirection.sqrMagnitude > 1f)
-            moveDirection.Normalize();
+        Vector3 moveDirection = moveForward * moveInput.y;
 
-        TryTransitionToSurface(moveDirection);
         SafeMove(moveDirection * moveSpeed * Time.deltaTime);
 
         if (moveDirection.sqrMagnitude > 0.001f)
         {
-            bool movingBackward =
-                moveInput.y < -0.1f &&
-                Mathf.Abs(moveInput.x) < 0.1f;
-
-            if (!movingBackward)
-            {
-                RotateToward(moveDirection, surfaceNormal);
-            }
+            TryTransitionToSurface(moveDirection);
         }
     }
 
