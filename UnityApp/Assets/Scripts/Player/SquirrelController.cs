@@ -30,6 +30,7 @@ public class SquirrelController : MonoBehaviour
     [SerializeField] private float surfaceOffset = 0.3f;
     [SerializeField] private float sphereProbeRadius = 0.18f;
     [SerializeField] private float maxSnapDistance = 5f;
+    [SerializeField] private float groundedDistance = 0.18f;
 
     [Header("Surface Transition")]
     [SerializeField, Range(0f, 180f)] private float maxSurfaceChangeAngle = 100f;
@@ -39,6 +40,7 @@ public class SquirrelController : MonoBehaviour
     [SerializeField] private float collisionRadius = 0.25f;
     [SerializeField] private float skinWidth = 0.03f;
     [SerializeField] private int slideIterations = 3;
+    [SerializeField] private float collisionCenterOffset = 0.22f;
 
     private Vector3 surfaceNormal = Vector3.up;
     private Vector3 lastSurfaceNormal = Vector3.up;
@@ -49,14 +51,6 @@ public class SquirrelController : MonoBehaviour
     private void Reset()
     {
         cameraTransform = Camera.main != null ? Camera.main.transform : null;
-    }
-
-    private void Awake()
-    {
-        if (surfaceOffset < collisionRadius + skinWidth)
-        {
-            surfaceOffset = collisionRadius + skinWidth;
-        }
     }
 
     private void Update()
@@ -197,6 +191,17 @@ public class SquirrelController : MonoBehaviour
             return;
         }
 
+        float distanceFromSurface = Vector3.Dot(transform.position - bestHit.point, bestHit.normal);
+
+        bool closeEnoughToGround =
+            distanceFromSurface <= surfaceOffset + groundedDistance;
+
+        if (!closeEnoughToGround)
+        {
+            grounded = false;
+            return;
+        }
+
         grounded = true;
         lastSurfaceNormal = surfaceNormal;
 
@@ -321,7 +326,7 @@ public class SquirrelController : MonoBehaviour
         blockingHit = new RaycastHit();
 
         RaycastHit[] hits = Physics.SphereCastAll(
-            transform.position,
+            GetCollisionCenter(),
             collisionRadius,
             direction,
             distance,
@@ -439,6 +444,12 @@ public class SquirrelController : MonoBehaviour
         return other.transform == transform || other.transform.IsChildOf(transform);
     }
 
+    private Vector3 GetCollisionCenter()
+    {
+        Vector3 upDirection = grounded ? surfaceNormal : Vector3.up;
+        return transform.position + upDirection * collisionCenterOffset;
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
@@ -448,7 +459,12 @@ public class SquirrelController : MonoBehaviour
         Gizmos.DrawRay(transform.position, -surfaceNormal * probeDistance);
 
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, collisionRadius);
+        Vector3 gizmoUp = Application.isPlaying ? (grounded ? surfaceNormal : Vector3.up): transform.up;
+
+        Gizmos.DrawWireSphere(
+            transform.position + gizmoUp * collisionCenterOffset,
+            collisionRadius
+        );
 
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position - surfaceNormal * surfaceOffset, sphereProbeRadius);
