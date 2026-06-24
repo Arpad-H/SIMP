@@ -13,9 +13,17 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.SimpAnroidCompanion">
+
+        <!-- Install the ML Kit barcode scanner module at app install time so the
+             in-app "Scan QR code" button works on first use (Google Code Scanner). -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:label="@string/app_name"
             android:theme="@style/Theme.SimpAnroidCompanion">
 
