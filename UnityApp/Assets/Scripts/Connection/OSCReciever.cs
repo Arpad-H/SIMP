@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using uOSC;
 
-public class OSCReceiver : MonoBehaviour
+public class OSCReciever : MonoBehaviour
 {
     [Tooltip("Log every incoming OSC message address (noisy: ~60 Hz per sensor). Use only to verify the phone feed.")]
     public bool logMessages = false;

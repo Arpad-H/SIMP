@@ -5,6 +5,7 @@ public class SquirrelController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
+    [SerializeField] private OSCReceiver oscReceiver;
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 4f;
@@ -42,20 +43,28 @@ public class SquirrelController : MonoBehaviour
     [SerializeField] private int slideIterations = 3;
     [SerializeField] private float collisionCenterOffset = 0.22f;
 
+    [Header("Phone Input")]
+    [SerializeField] private bool usePhoneInput = true;
+    [SerializeField] private bool combinePhoneWithKeyboard = true;
+
     private Vector3 surfaceNormal = Vector3.up;
     private Vector3 lastSurfaceNormal = Vector3.up;
     private bool grounded;
     private Vector3 airVelocity;
     private float ignoreSurfaceUntilTime;
 
+    private Vector2 phoneMove;
+
     private void Reset()
     {
         cameraTransform = Camera.main != null ? Camera.main.transform : null;
+        oscReceiver = FindAnyObjectByType<OSCReceiver>();
     }
 
     private void Update()
     {
         Vector2 moveInput = GetMoveInput();
+
 
         bool jumpPressed =
             Keyboard.current != null &&
@@ -95,22 +104,34 @@ public class SquirrelController : MonoBehaviour
 
     private Vector2 GetMoveInput()
     {
-        Vector2 moveInput = Vector2.zero;
+        Vector2 keyboardInput = Vector2.zero;
 
-        if (Keyboard.current == null)
-            return moveInput;
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed)
+                keyboardInput.x -= 1f;
 
-        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed)
-            moveInput.x -= 1f;
+            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed)
+                keyboardInput.x += 1f;
 
-        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed)
-            moveInput.x += 1f;
+            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed)
+                keyboardInput.y -= 1f;
 
-        if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed)
-            moveInput.y -= 1f;
+            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed)
+                keyboardInput.y += 1f;
+        }
 
-        if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed)
-            moveInput.y += 1f;
+        if (keyboardInput.sqrMagnitude > 1f)
+            keyboardInput.Normalize();
+
+        Vector2 moveInput = keyboardInput;
+
+        if (usePhoneInput)
+        {
+            moveInput = combinePhoneWithKeyboard
+                ? keyboardInput + phoneMove
+                : phoneMove;
+        }
 
         if (moveInput.sqrMagnitude > 1f)
             moveInput.Normalize();
@@ -469,4 +490,22 @@ public class SquirrelController : MonoBehaviour
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position - surfaceNormal * surfaceOffset, sphereProbeRadius);
     }
+
+
+    private void OnEnable()
+    {
+        if (oscReceiver != null)
+            oscReceiver.OnMove += HandlePhoneMove;
+    }
+
+    private void OnDisable()
+    {
+        if (oscReceiver != null)
+            oscReceiver.OnMove -= HandlePhoneMove;
+    }
+    private void HandlePhoneMove(Vector2 move)
+    {
+        phoneMove = move;
+    }
+
 }
