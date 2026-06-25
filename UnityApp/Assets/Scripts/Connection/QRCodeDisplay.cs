@@ -10,11 +10,12 @@ public class QRCodeDisplay : MonoBehaviour
 {
     public RawImage qrSlotImage;
     private string serverIP;
+    //TODO implement get port number
+    //private uOscServer oscserver;
 
     public void Start()
     {
-DisplayQRCodes();
-
+        DisplayQRCodes();
     }
 
 
@@ -26,7 +27,7 @@ DisplayQRCodes();
         // Assign index + 1 as the Player ID (e.g., Player1, Player2)
         string url = serverIP;
 
-        Texture2D qrTex = GenerateQR("simpconnect://connect?ip="+url+"&port=9000");  
+        Texture2D qrTex = GenerateQR("simpconnect://connect?ip="+url+"&port=9001");  
         qrSlotImage.texture = qrTex;
 
         Debug.Log($"QR Code generated: {url}");
