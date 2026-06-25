@@ -135,6 +135,13 @@ class MotionSensors(context: Context) : SensorEventListener {
         return msgs
     }
 
+    /**
+     * A one-off `/calibrate` message carrying the current attitude quaternion ([x, y, z, w]).
+     * Unity should treat this orientation as the new neutral/rest pose and express all subsequent
+     * `/attitude` input relative to it. Safe to read on the main thread (button handler).
+     */
+    fun calibrationMessage(): OscMessage = OscMessage("/calibrate", quaternion)
+
     private fun SensorEvent.toVec3() = Vec3(values[0], values[1], values[2])
     private fun Vec3.toArray() = floatArrayOf(x, y, z)
 }

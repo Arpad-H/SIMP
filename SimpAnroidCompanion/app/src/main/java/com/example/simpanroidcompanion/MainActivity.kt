@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
                     onScan = ::startScan,
                     onConnect = { ip, port -> connect(Connection.Connected(ip, port)) },
                     onDisconnect = ::disconnect,
+                    onCalibrate = ::calibrate,
                 )
             }
         }
@@ -91,6 +92,12 @@ class MainActivity : ComponentActivity() {
     private fun disconnect() {
         stopStreaming()
         connection = Connection.Disconnected
+    }
+
+    /** Tell Unity to treat the phone's current orientation as the new neutral position. */
+    private fun calibrate() {
+        if (!streaming) return
+        osc.send(sensors.calibrationMessage())
     }
 
     private fun startStreaming() {

@@ -96,6 +96,37 @@ fun TiltDial(gravity: Vec3, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * The large tilt "ball" for the play screen. Like [TiltDial] but drawn relative to a captured
+ * [neutral] pose: right after calibration the ball sits dead-centre (on the ring marker) and rolls
+ * toward whichever way you tilt away from that pose. Both [source] and [neutral] are gravity
+ * vectors in m/s²; before the first calibration [neutral] is zero, so it shows absolute tilt.
+ */
+@Composable
+fun GyroBall(source: Vec3, neutral: Vec3, modifier: Modifier = Modifier) {
+    val grid = MaterialTheme.colorScheme.surfaceVariant
+    val centerMark = MaterialTheme.colorScheme.outline
+    val dotColor = MaterialTheme.colorScheme.primary
+    val g = 9.81f
+    Canvas(modifier.aspectRatio(1f)) {
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val radius = min(size.width, size.height) / 2f - 8.dp.toPx()
+
+        drawCircle(grid, radius, c, style = Stroke(2.dp.toPx()))
+        drawCircle(grid, radius * 0.66f, c, style = Stroke(1.dp.toPx()))
+        drawCircle(grid, radius * 0.33f, c, style = Stroke(1.dp.toPx()))
+        drawLine(grid, Offset(c.x - radius, c.y), Offset(c.x + radius, c.y), 1.dp.toPx())
+        drawLine(grid, Offset(c.x, c.y - radius), Offset(c.x, c.y + radius), 1.dp.toPx())
+
+        // Ring marking the calibrated neutral, where the ball rests once you hold that pose.
+        drawCircle(centerMark, 6.dp.toPx(), c, style = Stroke(1.5.dp.toPx()))
+
+        val nx = ((source.x - neutral.x) / g).coerceIn(-1f, 1f)
+        val ny = ((source.y - neutral.y) / g).coerceIn(-1f, 1f)
+        drawCircle(dotColor, 13.dp.toPx(), Offset(c.x + nx * radius, c.y + ny * radius))
+    }
+}
+
 /** Three signed, centre-anchored bars (X red / Y green / Z blue) with numeric readouts. */
 @Composable
 fun Vector3Bars(v: Vec3, range: Float, modifier: Modifier = Modifier) {

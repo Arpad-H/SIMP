@@ -6,6 +6,7 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -71,6 +72,26 @@ class OscClient {
         socket?.close()
         socket = null
         address = null
+    }
+
+    /**
+     * Send a single message right away, in addition to the periodic stream, reusing the open
+     * socket and background thread. No-op if not currently connected. Used for one-off control
+     * messages such as `/calibrate`.
+     */
+    fun send(message: OscMessage) {
+        val exec = scheduler ?: return
+        try {
+            exec.execute {
+                try {
+                    rawSend(message.address, message.args)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        } catch (e: RejectedExecutionException) {
+            // Disconnected between the null-check and submit; nothing to send.
+        }
     }
 
     /** Build and transmit one OSC message. Must run on the scheduler thread. */

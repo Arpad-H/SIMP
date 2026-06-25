@@ -32,8 +32,8 @@ public class SliceObject : MonoBehaviour {
 
     [SerializeField] private Animator animator; //Auskommentiert, weil error
     private float chainsawRefuelSoundLength;
-    private bool canCut = false;
-    private bool hasFuel = false;
+    private bool canCut = true;
+    private bool hasFuel = true;
     private bool started = false;
     private GameObject Fuelpointer;
     private HapticClipPlayer runningHapticPlayer;
@@ -68,8 +68,20 @@ public class SliceObject : MonoBehaviour {
         HandleAudioAndHaptics();
         
         bool hasHit = Physics.Linecast(startSlicePoint.position, endSlicePoint.position, out RaycastHit hit, slicableLayer);
-        if (hasHit && canCut && hasFuel) {
+
+        // --- TEMP DIAGNOSTIC (remove once cutting works) ---
+        // Green line in Scene view = masked hit, red = no masked hit. Enable Gizmos to see it.
+        Debug.DrawLine(startSlicePoint.position, endSlicePoint.position, hasHit ? Color.green : Color.red);
+        // Unmasked cast: tells us what the blade actually crosses, regardless of layer.
+        if (Physics.Linecast(startSlicePoint.position, endSlicePoint.position, out RaycastHit anyHit)) {
+            int hitLayer = anyHit.transform.gameObject.layer;
+            Debug.Log($"[SliceDiag] blade crosses '{anyHit.transform.name}' layer={hitLayer} ({LayerMask.LayerToName(hitLayer)}) | slicableLayer.value={slicableLayer.value} maskedHit={hasHit} started={started} canCut={canCut} hasFuel={hasFuel}");
+        }
+        // --- END DIAGNOSTIC ---
+
+        if (hasHit && started && hasFuel) {
             GameObject target = hit.transform.gameObject;
+            Debug.Log($"[SliceObject]: Hit {target.name} at {hit.point}");
             Slice(target);
         }
     }
@@ -125,8 +137,8 @@ public class SliceObject : MonoBehaviour {
             SetupSlicedComponent(upperHull);
             GameObject lowerHull = hull.CreateLowerHull(target, crossSectionMaterial);
             SetupSlicedComponent(lowerHull);
-            upperHull.layer = LayerMask.NameToLayer("Sliceable");
-            lowerHull.layer = LayerMask.NameToLayer("Sliceable");
+            upperHull.layer = target.layer;
+            lowerHull.layer = target.layer;
             
             print("HULLS: " + upperHull + " " + lowerHull);
             

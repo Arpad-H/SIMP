@@ -1267,7 +1267,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blockId: f8766c17-aaf8-4b55-9431-de8deea83842
-  instanceId: 6687c6d9-eda1-45bf-bc85-2bf8cc495f09
+  instanceId: 45b3d6b7-5fc4-442f-9c1b-ab552cfa6958
   version: 1
   installationRoutineCheckpoint:
     _installationRoutineId: f8338144-8280-4ff6-9455-ae2bb9c20fe8
@@ -1523,10 +1523,9 @@ MonoBehaviour:
   velocityEstimator: {fileID: 242618372856357222}
   slicableLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   crossSectionMaterial: {fileID: 2100000, guid: a31f539b1993b1646994e9bc086fb7a3, type: 2}
   cutForce: 20
-  waterPos: {fileID: 0}
   chainsawRefuelSound: {fileID: 8300000, guid: af4f368f2f8e48545865dae3f21a15f1, type: 3}
   chainsawCutSound: {fileID: 6950021897969804529}
   chainsawIdleSound: {fileID: 780129849666425575}

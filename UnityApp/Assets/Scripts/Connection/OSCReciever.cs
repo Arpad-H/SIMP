@@ -7,7 +7,8 @@ public class OSCReceiver : MonoBehaviour
     [Tooltip("Log every incoming OSC message address (noisy: ~60 Hz per sensor). Use only to verify the phone feed.")]
     public bool logMessages = false;
 
-    // Orientation (quaternion), converted to Unity's left-handed space.
+    // Orientation (quaternion), converted to Unity's left-handed space and re-based on the last
+    // calibrated neutral pose (identity until the phone sends /calibrate).
     public Action<Quaternion> OnRotation;
 
     // Motion sensors (Vector3), converted to Unity's left-handed space.
@@ -16,6 +17,10 @@ public class OSCReceiver : MonoBehaviour
     public Action<Vector3> OnLinearAcceleration; // /linaccel      m/s^2 (gravity removed)
     public Action<Vector3> OnGravity;            // /gravity       m/s^2
     public Action<Vector3> OnMagnetometer;       // /magnetometer  microtesla
+
+    // Inverse of the neutral orientation captured at the last /calibrate. Pre-multiplying each raw
+    // orientation by this re-bases all rotation input on that neutral pose (neutral -> identity).
+    private Quaternion neutralInverse = Quaternion.identity;
 
     void Start()
     {
@@ -32,15 +37,18 @@ public class OSCReceiver : MonoBehaviour
         {
             case "/attitude":
             {
-                float x = (float)message.values[0];
-                float y = (float)message.values[1];
-                float z = (float)message.values[2];
-                float w = (float)message.values[3];
+                // Deliver the orientation relative to the calibrated neutral pose.
+                Quaternion unityQ = ToUnityQuaternion(message);
+                OnRotation?.Invoke(neutralInverse * unityQ);
+                break;
+            }
 
-                // Swap Y and Z, and adjust signs for left-handed Unity space.
-                Quaternion unityQ = new Quaternion(x, z, y, -w);
-
-                OnRotation?.Invoke(unityQ);
+            case "/calibrate":
+            {
+                // The phone's current pose becomes the new neutral; store its inverse so every
+                // subsequent /attitude is expressed relative to it (neutral -> identity).
+                neutralInverse = Quaternion.Inverse(ToUnityQuaternion(message));
+                Debug.Log("Calibrated: new neutral orientation set");
                 break;
             }
 
@@ -57,6 +65,17 @@ public class OSCReceiver : MonoBehaviour
                 break;
             }
         }
+    }
+
+    // Reads the 4-float quaternion (x, y, z, w) and maps it into Unity's left-handed space by
+    // swapping Y and Z and flipping W, matching the original /attitude conversion.
+    private static Quaternion ToUnityQuaternion(Message message)
+    {
+        float x = (float)message.values[0];
+        float y = (float)message.values[1];
+        float z = (float)message.values[2];
+        float w = (float)message.values[3];
+        return new Quaternion(x, z, y, -w);
     }
 
     // Reads 3 floats and maps the phone's right-handed axes (x right, y up, z toward the user)

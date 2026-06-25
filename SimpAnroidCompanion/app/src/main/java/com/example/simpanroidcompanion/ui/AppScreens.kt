@@ -30,7 +30,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Switch
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import com.example.simpanroidcompanion.sensor.MotionSensors
+import com.example.simpanroidcompanion.sensor.Vec3
 import kotlin.math.roundToInt
 
 /** Whether the app currently has a streaming target. */
@@ -47,15 +58,84 @@ fun AppRoot(
     onScan: () -> Unit,
     onConnect: (String, Int) -> Unit,
     onDisconnect: () -> Unit,
+    onCalibrate: () -> Unit,
 ) {
     Scaffold { padding ->
         when (connection) {
             is Connection.Disconnected ->
                 ConnectScreen(Modifier.padding(padding), status, onScan, onConnect)
             is Connection.Connected ->
-                DashboardScreen(Modifier.padding(padding), sensors, connection, onDisconnect)
+                ConnectedScreen(Modifier.padding(padding), sensors, connection, onDisconnect, onCalibrate)
         }
     }
+}
+
+/**
+ * The connected experience. A prominent toggle swaps between the full sensor [DashboardScreen] and
+ * the minimal [PlayScreen] (gyro ball + Calibrate). Both run off the same live connection, so
+ * flipping the switch is instant — nothing reconnects or restarts the stream.
+ */
+@Composable
+private fun ConnectedScreen(
+    modifier: Modifier,
+    sensors: MotionSensors,
+    connection: Connection.Connected,
+    onDisconnect: () -> Unit,
+    onCalibrate: () -> Unit,
+) {
+    var playMode by rememberSaveable { mutableStateOf(false) }
+    Column(modifier.fillMaxSize()) {
+        ModeToggle(
+            playMode = playMode,
+            onModeChange = { playMode = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        Crossfade(targetState = playMode, modifier = Modifier.weight(1f), label = "mode") { play ->
+            if (play) {
+                PlayScreen(sensors, onCalibrate)
+            } else {
+                DashboardScreen(Modifier, sensors, connection, onDisconnect)
+            }
+        }
+    }
+}
+
+/**
+ * A big labelled switch flipping between "Sensors" and "Play". The flanking labels are tappable too,
+ * giving a generous touch target on either side of the switch.
+ */
+@Composable
+private fun ModeToggle(
+    playMode: Boolean,
+    onModeChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ModeLabel("Sensors", active = !playMode) { onModeChange(false) }
+            Switch(
+                checked = playMode,
+                onCheckedChange = onModeChange,
+                modifier = Modifier.scale(1.4f).padding(horizontal = 28.dp),
+            )
+            ModeLabel("Play", active = playMode) { onModeChange(true) }
+        }
+    }
+}
+
+@Composable
+private fun ModeLabel(text: String, active: Boolean, onClick: () -> Unit) {
+    Text(
+        text,
+        modifier = Modifier.clickable(onClick = onClick).padding(8.dp),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+        color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+    )
 }
 
 @Composable
@@ -186,6 +266,67 @@ private fun DashboardScreen(
         }
 
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+/**
+ * Minimal in-game interface, laid out for a phone held in landscape: a large gyro ball plus a
+ * Calibrate button. Calibrating captures the current pose as neutral — it recentres the on-screen
+ * ball and (via [onCalibrate]) tells Unity to rebase all subsequent input on this orientation.
+ */
+@Composable
+private fun PlayScreen(sensors: MotionSensors, onCalibrate: () -> Unit) {
+    val haptics = LocalHapticFeedback.current
+    var neutral by remember { mutableStateOf(Vec3.ZERO) }
+    val source = if (sensors.hasGravity) sensors.gravity else sensors.accel
+
+    val calibrate: () -> Unit = {
+        neutral = source
+        onCalibrate()
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
+    BoxWithConstraints(Modifier.fillMaxSize().padding(20.dp)) {
+        if (maxWidth > maxHeight) {
+            // Landscape: ball on one half, Calibrate on the other.
+            val ball = minOf(maxHeight * 0.92f, maxWidth * 0.45f)
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    GyroBall(source, neutral, Modifier.size(ball))
+                }
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    CalibrateButton(calibrate)
+                }
+            }
+        } else {
+            // Portrait: stacked, ball above the button.
+            val ball = minOf(maxWidth * 0.85f, maxHeight * 0.6f)
+            Column(
+                Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                GyroBall(source, neutral, Modifier.size(ball))
+                Spacer(Modifier.height(32.dp))
+                CalibrateButton(calibrate)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalibrateButton(onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Button(onClick = onClick, modifier = Modifier.height(64.dp).widthIn(min = 200.dp)) {
+            Text("Calibrate", style = MaterialTheme.typography.titleLarge)
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Hold your neutral pose, then tap to set it as centre.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
