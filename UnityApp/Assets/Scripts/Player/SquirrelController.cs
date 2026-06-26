@@ -1,8 +1,19 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+public enum SquirrelState
+{
+    Walking,
+    Gliding
+}
+
 public class SquirrelController : MonoBehaviour
 {
+    // Current locomotion state, derived from the single surface probe. Grounded
+    // means we're clinging to a surface (walking); otherwise we're in the air
+    // (gliding). Read by SquirrelAnimator to pick the matching sprite set.
+    public SquirrelState State => grounded ? SquirrelState.Walking : SquirrelState.Gliding;
+
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private OSCReceiver oscReceiver;
