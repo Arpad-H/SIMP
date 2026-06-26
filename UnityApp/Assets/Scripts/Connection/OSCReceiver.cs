@@ -6,6 +6,11 @@ public class OSCReceiver : MonoBehaviour
 {
     public Action<Quaternion> OnRotation;
     public Action<Vector2> OnMove;
+
+    // Raw motion streams from the phone, mapped into Unity's left-handed space.
+    public Action<Vector3> OnAcceleration;        // /accel    m/s^2 (includes gravity)
+    public Action<Vector3> OnLinearAcceleration;  // /linaccel m/s^2 (gravity removed)
+
     public enum PhoneOrientationMode{Portrait, LandscapeLeft, LandscapeRight}
 
     [Header("Phone Movement")]
@@ -40,6 +45,18 @@ public class OSCReceiver : MonoBehaviour
                 float yaw = (float)message.values[2];
 
                 //Debug.Log($"Pitch={pitch} Roll={roll} Yaw={yaw}");
+                break;
+            }
+
+            case "/accel":
+            {
+                OnAcceleration?.Invoke(ReadVec3(message));
+                break;
+            }
+
+            case "/linaccel":
+            {
+                OnLinearAcceleration?.Invoke(ReadVec3(message));
                 break;
             }
 
@@ -141,6 +158,16 @@ public class OSCReceiver : MonoBehaviour
         moveY = ApplyDeadZone(moveY, deadZone);
 
         return new Vector2(moveX, moveY);
+    }
+
+    // Reads 3 floats and maps the phone's axes into Unity's left-handed space by swapping Y and Z,
+    // matching the /attitude quaternion conversion above.
+    private static Vector3 ReadVec3(Message message)
+    {
+        float x = (float)message.values[0];
+        float y = (float)message.values[1];
+        float z = (float)message.values[2];
+        return new Vector3(x, z, y);
     }
 
     private float NormalizeAngle(float angle)
