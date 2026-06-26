@@ -35,7 +35,6 @@ Material:
   - _RECEIVE_SHADOWS_ON
   - _REFLECTIONS_CLASSIC
   - _RIMLIGHTINGSTAGE_BEFORELIGHTING
-  - _RIM_LIGHTING_ON
   - _SHADINGMODEL_PBR
   - _SPECULARMODEL_CLASSIC
   - _SUBSURFACE_SCATTERING_ON
@@ -293,7 +292,7 @@ Material:
     - _ReflectionsAtten: 0.4
     - _RenderPreset: 1
     - _RimAttenuation: 0.3
-    - _RimLighting: 1
+    - _RimLighting: 0
     - _RimLightingStage: 0
     - _SSSAtten: 0.3
     - _SSSFrontAtten: 0.2
