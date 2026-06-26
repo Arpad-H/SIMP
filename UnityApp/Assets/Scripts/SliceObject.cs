@@ -18,7 +18,10 @@ public class SliceObject : MonoBehaviour {
     [SerializeField] private VelocityEstimator velocityEstimator;
     [SerializeField] private LayerMask slicableLayer;
     [SerializeField] private Material crossSectionMaterial;
-    [SerializeField] private float cutForce = 20;
+    [Tooltip("Impulse (along the cut normal) that pushes the two halves apart once the cut completes.")]
+    [SerializeField] private float cutForce = 3;
+    [Tooltip("Seconds of continuous sawing needed to cut all the way through an object.")]
+    [SerializeField] private float timeToCut = 4f;
     [SerializeField] private AudioClip chainsawRefuelSound;
     [SerializeField] private AudioSource chainsawCutSound;
     [SerializeField] private AudioSource chainsawIdleSound;
@@ -69,21 +72,37 @@ public class SliceObject : MonoBehaviour {
         
         bool hasHit = Physics.Linecast(startSlicePoint.position, endSlicePoint.position, out RaycastHit hit, slicableLayer);
 
-        // --- TEMP DIAGNOSTIC (remove once cutting works) ---
         // Green line in Scene view = masked hit, red = no masked hit. Enable Gizmos to see it.
         Debug.DrawLine(startSlicePoint.position, endSlicePoint.position, hasHit ? Color.green : Color.red);
-        // Unmasked cast: tells us what the blade actually crosses, regardless of layer.
-        if (Physics.Linecast(startSlicePoint.position, endSlicePoint.position, out RaycastHit anyHit)) {
-            int hitLayer = anyHit.transform.gameObject.layer;
-            Debug.Log($"[SliceDiag] blade crosses '{anyHit.transform.name}' layer={hitLayer} ({LayerMask.LayerToName(hitLayer)}) | slicableLayer.value={slicableLayer.value} maskedHit={hasHit} started={started} canCut={canCut} hasFuel={hasFuel}");
-        }
-        // --- END DIAGNOSTIC ---
 
         if (hasHit && started && hasFuel) {
             GameObject target = hit.transform.gameObject;
-            Debug.Log($"[SliceObject]: Hit {target.name} at {hit.point}");
-            Slice(target);
+
+            // Progress lives on the target, so it survives the blade leaving and
+            // returning. First contact locks the cut plane.
+            CutProgress cut = target.GetComponent<CutProgress>();
+            if (cut == null) {
+                cut = target.AddComponent<CutProgress>();
+                cut.Begin(hit.point, ComputeCutNormal());
+            }
+
+            cut.Advance(Time.fixedDeltaTime, timeToCut);
+
+            if (cut.IsComplete) {
+                Slice(target, cut.PlanePoint, cut.PlaneNormal);
+            }
         }
+    }
+
+    // Cut plane = the plane swept by the blade as it moves. Falls back to the saw's
+    // orientation when the blade is momentarily still (velocity ~ 0 gives no plane).
+    private Vector3 ComputeCutNormal() {
+        Vector3 blade = endSlicePoint.position - startSlicePoint.position;
+        Vector3 velocity = velocityEstimator.GetVelocityEstimate();
+        Vector3 normal = Vector3.Cross(blade, velocity);
+        if (normal.sqrMagnitude < 1e-6f) normal = Vector3.Cross(blade, transform.forward);
+        if (normal.sqrMagnitude < 1e-6f) normal = Vector3.Cross(blade, Vector3.up);
+        return normal.normalized;
     }
     
     public void HandleAudioAndHaptics() {
@@ -122,35 +141,29 @@ public class SliceObject : MonoBehaviour {
         }
     }
     
-    public void Slice(GameObject target) {
-        if (!chainsawCutSound.isPlaying) {
-            // chainsawCutSound.Play();
-        }
-        Vector3 velocity = velocityEstimator.GetVelocityEstimate();
-        Vector3 planeNormal = Vector3.Cross(endSlicePoint.position - startSlicePoint.position, velocity);
-        planeNormal.Normalize();
-        
-        SlicedHull hull = target.Slice(endSlicePoint.position, planeNormal);
+    public void Slice(GameObject target, Vector3 planePoint, Vector3 planeNormal) {
+        SlicedHull hull = target.Slice(planePoint, planeNormal);
 
         if (hull != null) {
             GameObject upperHull = hull.CreateUpperHull(target, crossSectionMaterial);
-            SetupSlicedComponent(upperHull);
+            SetupSlicedComponent(upperHull, planeNormal);
             GameObject lowerHull = hull.CreateLowerHull(target, crossSectionMaterial);
-            SetupSlicedComponent(lowerHull);
+            SetupSlicedComponent(lowerHull, -planeNormal);
             upperHull.layer = target.layer;
             lowerHull.layer = target.layer;
-            
+
             print("HULLS: " + upperHull + " " + lowerHull);
-            
+
             Destroy(target);
         }
     }
 
-    public void SetupSlicedComponent(GameObject slicedObject) {
+    public void SetupSlicedComponent(GameObject slicedObject, Vector3 pushDirection) {
         Rigidbody rb = slicedObject.AddComponent<Rigidbody>();
         MeshCollider collider = slicedObject.AddComponent<MeshCollider>();
         collider.convex = true;
-        rb.AddExplosionForce(cutForce, slicedObject.transform.position, 1);
+        // Small nudge along the cut so the two halves part and drop, rather than exploding.
+        rb.AddForce(pushDirection.normalized * cutForce, ForceMode.Impulse);
     }
 
     public void fueledUp() {
