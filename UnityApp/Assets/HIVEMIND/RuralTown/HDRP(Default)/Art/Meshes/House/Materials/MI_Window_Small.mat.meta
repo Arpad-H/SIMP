@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 620f849cd8779c94da6ae83a08314fdc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 295253
+  packageName: Modular Rural Town / Farm Environment (Medieval,Town,Village)
+  packageVersion: 1.0
+  assetPath: Assets/HIVEMIND/RuralTown/HDRP(Default)/Art/Meshes/House/Materials/MI_Window_Small.mat
+  uploadId: 705962

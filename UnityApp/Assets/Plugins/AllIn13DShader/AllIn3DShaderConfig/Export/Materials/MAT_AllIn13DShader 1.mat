@@ -43,6 +43,7 @@ Material:
   - _TEXTUREBLENDINGSOURCE_VERTEXCOLOR
   - _TRIPLANARNORMALSPACE_WORLD
   - _USE_WIND_VERTICAL_MASK
+  - _WIND_ON
   m_InvalidKeywords:
   - _AFFECTED_BY_AMBIENT_ON
   - _GLITCHWORLDSPACE_ON
@@ -353,7 +354,7 @@ Material:
     - _WaveX: 0
     - _WaveY: 0.5
     - _WindAttenuation: 1
-    - _WindOn: 0
+    - _WindOn: 1
     - _WindVerticalMaskMaxY: 1
     - _WindVerticalMaskMinY: -1
     - _ZTestMode: 4
