@@ -12,28 +12,30 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _METALLICSPECGLOSSMAP
-  - _NORMALMAP
+  - _ALPHAPREMULTIPLY_ON
   - _OCCLUSIONMAP
+  - _SURFACE_TYPE_TRANSPARENT
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3000
   stringTagMap:
-    RenderType: Opaque
+    RenderType: Transparent
   disabledShaderPasses:
   - MOTIONVECTORS
+  - DepthOnly
+  - SHADOWCASTER
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: f0f0769391d5cdb458bbadb30216c077, type: 3}
+        m_Texture: {fileID: 2800000, guid: a0f6fc6992d71b7498eeda5d009497ec, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: 5b178007e8d9b944c80a75a6839320b9, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -53,15 +55,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: f0f0769391d5cdb458bbadb30216c077, type: 3}
+        m_Texture: {fileID: 2800000, guid: a0f6fc6992d71b7498eeda5d009497ec, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
-        m_Texture: {fileID: 2800000, guid: 2c64974c221bfba43987779af81575fe, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
-        m_Texture: {fileID: 2800000, guid: 2c64974c221bfba43987779af81575fe, type: 3}
+        m_Texture: {fileID: 2800000, guid: 6c2f12713aeab6b4e857f7693913a3a0, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
@@ -98,8 +100,8 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _DstBlend: 0
-    - _DstBlendAlpha: 0
+    - _DstBlend: 10
+    - _DstBlendAlpha: 10
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -114,10 +116,10 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
-    - _Surface: 0
+    - _Surface: 1
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
-    - _ZWrite: 1
+    - _ZWrite: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

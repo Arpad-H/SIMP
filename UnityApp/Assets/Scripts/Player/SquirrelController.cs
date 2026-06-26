@@ -30,12 +30,30 @@ public class SquirrelController : MonoBehaviour
     [SerializeField] private float probeDistance = 5f;
     [SerializeField] private float surfaceOffset = 0.3f;
     [SerializeField] private float sphereProbeRadius = 0.18f;
-    [SerializeField] private float maxSnapDistance = 5f;
-    [SerializeField] private float groundedDistance = 0.18f;
+    // How far past surfaceOffset the head anchor may be and still count as stuck.
+    [SerializeField] private float stickTolerance = 0.25f;
+    // How fast the body is pulled back to surfaceOffset along the normal.
+    [SerializeField] private float heightCorrectSpeed = 18f;
+
+    [Header("Head Probe")]
+    // The single surface probe is taken from a point near the head. This keeps
+    // the camera steady (it sits near the pivot, so the tail/body swings instead
+    // of the view) and makes the probe lead in the direction you face, so sharp
+    // transitions are picked up early.
+    [SerializeField] private float headForwardOffset = 0.25f;
+    [SerializeField] private float headUpOffset = 0f;
+    // How strongly the lead probe leans forward (0 = straight into the surface).
+    [SerializeField] private float forwardProbeBias = 0.5f;
 
     [Header("Surface Transition")]
-    [SerializeField, Range(0f, 180f)] private float maxSurfaceChangeAngle = 100f;
-    [SerializeField] private float surfaceTransitionProbeDistance = 0.8f;
+    [SerializeField, Range(0f, 180f)] private float maxSurfaceChangeAngle = 140f;
+
+    [Header("Surface Stickiness")]
+    // How long after losing grip we keep holding the surface orientation
+    // before righting up. Smooths out single-frame probe misses.
+    [SerializeField] private float groundCoyoteTime = 0.2f;
+    // How fast we ease back to world-up once genuinely airborne/gliding.
+    [SerializeField] private float airRightingSpeed = 4f;
 
     [Header("Collision")]
     [SerializeField] private float collisionRadius = 0.25f;
@@ -52,6 +70,8 @@ public class SquirrelController : MonoBehaviour
     private bool grounded;
     private Vector3 airVelocity;
     private float ignoreSurfaceUntilTime;
+    private float lastGroundedTime = -999f;
+    private Vector3 airAlignUp = Vector3.up;
 
     private Vector2 phoneMove;
 
@@ -65,20 +85,11 @@ public class SquirrelController : MonoBehaviour
     {
         Vector2 moveInput = GetMoveInput();
 
-
         bool jumpPressed =
             Keyboard.current != null &&
             Keyboard.current.spaceKey.wasPressedThisFrame;
 
-        if (Time.time >= ignoreSurfaceUntilTime)
-        {
-            ProbeSurface();
-        }
-        else
-        {
-            grounded = false;
-        }
-
+        // `grounded` here is the result of the previous frame's stick test.
         if (grounded && jumpPressed)
         {
             Jump(moveInput);
@@ -94,9 +105,15 @@ public class SquirrelController : MonoBehaviour
             GlideWithGlobalGravity(moveInput);
         }
 
+        // A single probe, taken after we've moved, is the only thing that drives
+        // grounding, the surface normal and height. No competing systems.
         if (Time.time >= ignoreSurfaceUntilTime)
         {
-            ProbeSurface();
+            StickToSurface();
+        }
+        else
+        {
+            grounded = false;
         }
 
         AlignToSurface();
@@ -163,25 +180,76 @@ public class SquirrelController : MonoBehaviour
 
         ignoreSurfaceUntilTime = Time.time + jumpSurfaceIgnoreTime;
     }
-    private void ProbeSurface()
+    // The probe point on the body, near the head. Offset forward so the probe
+    // leads in the direction we face, and (optionally) up toward the head.
+    private Vector3 ProbeAnchor()
     {
-        grounded = false;
+        return transform.position
+            + transform.forward * headForwardOffset
+            + transform.up * headUpOffset;
+    }
 
-        Vector3[] probeDirections =
+    // Our facing flattened into the current surface plane. Falls back gracefully
+    // if we're momentarily facing straight along the normal.
+    private Vector3 SurfaceForward()
+    {
+        Vector3 forward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal);
+
+        if (forward.sqrMagnitude < 0.0001f)
+            forward = Vector3.ProjectOnPlane(transform.up, surfaceNormal);
+
+        if (forward.sqrMagnitude < 0.0001f)
+            forward = Vector3.ProjectOnPlane(Vector3.forward, surfaceNormal);
+
+        return forward.normalized;
+    }
+
+    // Single source of truth for grounding, surface normal and height. Casts a
+    // small forward-biased fan from the head anchor. While grounded every ray is
+    // expressed in the surface frame (relative to the current normal), so we are
+    // never pulled toward unrelated geometry like the floor under a wall we are
+    // clinging to. While airborne we add world/body-down rays to detect landing.
+    private void StickToSurface()
+    {
+        bool wasGrounded = grounded;
+
+        Vector3 anchor = ProbeAnchor();
+        Vector3 n = surfaceNormal;
+        Vector3 f = SurfaceForward();
+
+        Vector3[] directions;
+        if (wasGrounded)
         {
-            -surfaceNormal,
-            Vector3.down,
-            -transform.up
-        };
+            directions = new[]
+            {
+                -n,                          // straight into the surface: primary grip
+                -n + f * forwardProbeBias,   // lead forward over convex edges
+                f - n * 0.5f,                // forward & down: next branch / under-edge
+                f + n * 0.7f,                // forward & up: branch above the head
+                -n - f * 0.4f,               // trailing grip while cresting an edge
+            };
+        }
+        else
+        {
+            directions = new[]
+            {
+                -transform.up,
+                Vector3.down,
+                airVelocity.sqrMagnitude > 0.01f ? airVelocity.normalized : Vector3.down,
+            };
+        }
 
         RaycastHit bestHit = new RaycastHit();
-        bool foundHit = false;
-        float bestDistance = float.MaxValue;
+        bool found = false;
+        float nearestDistance = float.MaxValue;
 
-        foreach (Vector3 rawDirection in probeDirections)
+        foreach (Vector3 rawDirection in directions)
         {
+            if (rawDirection.sqrMagnitude < 0.0001f)
+                continue;
+
             Vector3 direction = rawDirection.normalized;
-            Vector3 origin = transform.position - direction * 0.1f;
+            Vector3 origin = anchor + n * sphereProbeRadius; // start just off the surface
 
             RaycastHit[] hits = Physics.SphereCastAll(
                 origin,
@@ -197,51 +265,61 @@ public class SquirrelController : MonoBehaviour
                 if (IsOwnCollider(hit.collider))
                     continue;
 
-                if (hit.distance < bestDistance)
+                // Reject absurd flips from the surface we're on (e.g. grabbing
+                // the underside of our own branch as a separate surface).
+                if (wasGrounded && Vector3.Angle(n, hit.normal) > maxSurfaceChangeAngle)
+                    continue;
+
+                // Perpendicular distance from the head anchor to this surface.
+                float distAlong = Vector3.Dot(anchor - hit.point, hit.normal);
+
+                if (distAlong < -surfaceOffset)                 // behind / inside it
+                    continue;
+
+                if (distAlong > surfaceOffset + stickTolerance) // too far to cling
+                    continue;
+
+                // Prefer the nearest surface so we stay on what's under us and
+                // only transition when another surface actually gets closer.
+                if (distAlong < nearestDistance)
                 {
-                    bestDistance = hit.distance;
+                    nearestDistance = distAlong;
                     bestHit = hit;
-                    foundHit = true;
+                    found = true;
                 }
             }
         }
 
-        if (!foundHit)
-        {
-            grounded = false;
-            return;
-        }
-
-        float distanceFromSurface = Vector3.Dot(transform.position - bestHit.point, bestHit.normal);
-
-        bool closeEnoughToGround =
-            distanceFromSurface <= surfaceOffset + groundedDistance;
-
-        if (!closeEnoughToGround)
+        if (!found)
         {
             grounded = false;
             return;
         }
 
         grounded = true;
+        lastGroundedTime = Time.time;
         lastSurfaceNormal = surfaceNormal;
+
+        // Decisive grab for big normal changes (corners / branch jumps), gentle
+        // blend for small ones (following a curve). Snap immediately on landing.
+        float changeAngle = Vector3.Angle(surfaceNormal, bestHit.normal);
+        float grab = wasGrounded ? Mathf.InverseLerp(20f, 90f, changeAngle) : 1f;
+        float blend = Mathf.Lerp(normalBlendSpeed * Time.deltaTime, 1f, grab);
 
         surfaceNormal = Vector3.Slerp(
             surfaceNormal,
             bestHit.normal.normalized,
-            normalBlendSpeed * Time.deltaTime
+            blend
         ).normalized;
 
-        if (bestHit.distance <= maxSnapDistance)
-        {
-            Vector3 targetPosition = bestHit.point + surfaceNormal * surfaceOffset;
+        // Pull the body back to surfaceOffset along the (updated) normal only —
+        // never toward the hit point — so a forward-leaning probe never drags us
+        // forward.
+        float currentDistance = Vector3.Dot(ProbeAnchor() - bestHit.point, surfaceNormal);
+        float correction = surfaceOffset - currentDistance;
 
-            transform.position = Vector3.Lerp(
-                transform.position,
-                targetPosition,
-                30f * Time.deltaTime
-            );
-        }
+        transform.position +=
+            surfaceNormal * correction * Mathf.Clamp01(heightCorrectSpeed * Time.deltaTime);
     }
 
     private void MoveAlongSurface(Vector2 moveInput)
@@ -253,25 +331,13 @@ public class SquirrelController : MonoBehaviour
             transform.Rotate(surfaceNormal, yawAmount, Space.World);
         }
 
-        // Forward/backward movement is based on the squirrel's own facing direction.
-        Vector3 moveForward = Vector3.ProjectOnPlane(transform.forward, surfaceNormal).normalized;
-
-        if (moveForward.sqrMagnitude < 0.001f && cameraTransform != null)
-        {
-            moveForward = Vector3.ProjectOnPlane(cameraTransform.forward, surfaceNormal).normalized;
-        }
-
-        if (moveForward.sqrMagnitude < 0.001f)
-            return;
-
+        // Forward/backward movement follows our facing flattened onto the
+        // surface. Transitions onto other surfaces are handled by StickToSurface
+        // (called right after we move), not here.
+        Vector3 moveForward = SurfaceForward();
         Vector3 moveDirection = moveForward * moveInput.y;
 
         SafeMove(moveDirection * moveSpeed * Time.deltaTime);
-
-        if (moveDirection.sqrMagnitude > 0.001f)
-        {
-            TryTransitionToSurface(moveDirection);
-        }
     }
 
     private void GlideWithGlobalGravity(Vector2 moveInput)
@@ -381,7 +447,35 @@ public class SquirrelController : MonoBehaviour
 
     private void AlignToSurface()
     {
-        Vector3 targetUp = grounded ? surfaceNormal : Vector3.up;
+        Vector3 targetUp;
+
+        // Hold the surface orientation while grounded, and for a short coyote
+        // window after losing grip, so brief probe misses (common on curved
+        // trunks or while crossing onto an inverted surface) don't make the
+        // squirrel snap back to its neutral upright pose.
+        if (grounded || Time.time - lastGroundedTime < groundCoyoteTime)
+        {
+            targetUp = surfaceNormal;
+            airAlignUp = surfaceNormal;
+        }
+        else
+        {
+            // Genuinely airborne: ease back toward world up instead of
+            // requesting an instant 180° flip (the ambiguous flip is what
+            // looks like a violent snap when you're upside down).
+            airAlignUp = Vector3.Slerp(
+                airAlignUp,
+                Vector3.up,
+                airRightingSpeed * Time.deltaTime
+            ).normalized;
+
+            targetUp = airAlignUp;
+        }
+
+        // Rotate about the head anchor (not the transform pivot) so the front of
+        // the body / camera stays put and the tail swings instead — this hides
+        // most of the orientation wobble from the camera.
+        Vector3 anchorBefore = ProbeAnchor();
 
         Quaternion surfaceAlignment =
             Quaternion.FromToRotation(transform.up, targetUp) * transform.rotation;
@@ -391,58 +485,10 @@ public class SquirrelController : MonoBehaviour
             surfaceAlignment,
             normalBlendSpeed * Time.deltaTime
         );
+
+        transform.position += anchorBefore - ProbeAnchor();
     }
 
-    private void TryTransitionToSurface(Vector3 moveDirection)
-    {
-        if (moveDirection.sqrMagnitude < 0.001f)
-            return;
-
-        Vector3 origin = transform.position + surfaceNormal * surfaceOffset;
-
-        RaycastHit[] hits = Physics.SphereCastAll(
-            origin,
-            sphereProbeRadius,
-            moveDirection.normalized,
-            surfaceTransitionProbeDistance,
-            solidSurfaceMask,
-            QueryTriggerInteraction.Ignore
-        );
-
-        RaycastHit bestHit = new RaycastHit();
-        bool foundSurface = false;
-        float closestDistance = float.MaxValue;
-
-        foreach (RaycastHit hit in hits)
-        {
-            if (IsOwnCollider(hit.collider))
-                continue;
-
-            float angleFromCurrentSurface = Vector3.Angle(surfaceNormal, hit.normal);
-
-            if (angleFromCurrentSurface > maxSurfaceChangeAngle)
-                continue;
-
-            if (hit.distance < closestDistance)
-            {
-                closestDistance = hit.distance;
-                bestHit = hit;
-                foundSurface = true;
-            }
-        }
-
-        if (!foundSurface)
-            return;
-
-        surfaceNormal = bestHit.normal.normalized;
-
-        Vector3 targetPosition = bestHit.point + surfaceNormal * surfaceOffset;
-        transform.position = Vector3.Lerp(
-            transform.position,
-            targetPosition,
-            20f * Time.deltaTime
-        );
-    }
     private void RotateToward(Vector3 direction, Vector3 up)
     {
         if (direction.sqrMagnitude < 0.001f)
@@ -473,22 +519,26 @@ public class SquirrelController : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
+        Vector3 anchor = ProbeAnchor();
+
         Gizmos.color = Color.green;
-        Gizmos.DrawRay(transform.position, surfaceNormal);
+        Gizmos.DrawRay(anchor, surfaceNormal);
+
+        // Head anchor (the single probe point) and the lead probe direction.
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(anchor, sphereProbeRadius);
 
         Gizmos.color = Color.red;
-        Gizmos.DrawRay(transform.position, -surfaceNormal * probeDistance);
+        Vector3 lead = (-surfaceNormal + SurfaceForward() * forwardProbeBias).normalized;
+        Gizmos.DrawRay(anchor, lead * probeDistance);
 
         Gizmos.color = Color.yellow;
-        Vector3 gizmoUp = Application.isPlaying ? (grounded ? surfaceNormal : Vector3.up): transform.up;
+        Vector3 gizmoUp = Application.isPlaying ? (grounded ? surfaceNormal : Vector3.up) : transform.up;
 
         Gizmos.DrawWireSphere(
             transform.position + gizmoUp * collisionCenterOffset,
             collisionRadius
         );
-
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position - surfaceNormal * surfaceOffset, sphereProbeRadius);
     }
 
 
