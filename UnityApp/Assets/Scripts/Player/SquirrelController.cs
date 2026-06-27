@@ -27,14 +27,51 @@ public class SquirrelController : MonoBehaviour
     [SerializeField] private float jumpUpSpeed = 9f;
     [SerializeField] private float jumpForwardBoost = 4f;
     [SerializeField] private float gravity = 18f;
-    [SerializeField] private float maxFallSpeed = 18f;
     [SerializeField] private float jumpSurfaceIgnoreTime = 0.2f;
 
-    [Header("Gliding / Falling")]
-    [SerializeField] private float glideForwardSpeed = 3f;
-    [SerializeField] private float glideForwardControl = 2f;
-    [SerializeField] private float glideDownSpeed = 5f;
-    [SerializeField] private float glideTurnSpeed = 120f;
+    [Header("Gliding / Wingsuit")]
+    // While airborne the squirrel flies like a wingsuit / aircraft rather than a
+    // walker: tilt (or A/D + W/S) sets a target BANK and PITCH, banking carves a
+    // coordinated turn (yaw follows roll), and pitch trades height for speed. The
+    // controls are self-centering — hold the phone flat / release the keys and the
+    // squirrel eases back to level flight.
+
+    // Maximum bank (roll) angle the controls steer toward, in degrees.
+    [SerializeField] private float maxBankAngle = 55f;
+    // Maximum nose-up / nose-down (pitch) angle the controls steer toward.
+    [SerializeField] private float maxPitchAngle = 45f;
+    // How hard the body chases the target attitude (deg/s of correction per deg of
+    // error). Higher = crisper, twitchier; lower = heavier, gliding feel.
+    [SerializeField] private float attitudeGain = 4f;
+    // Caps on how fast the body can roll / pitch, so big stick throws still feel
+    // like an aircraft rotating rather than snapping.
+    [SerializeField] private float maxRollRate = 200f;
+    [SerializeField] private float maxPitchRate = 140f;
+    // Coordinated turn: yaw rate = turnCoordination * g * tan(bank) / speed.
+    // 1 = physically coordinated; raise for snappier arcade turns.
+    [SerializeField] private float turnCoordination = 1f;
+    [SerializeField] private float maxTurnRate = 120f;
+    // Wing authority: how fast lift can bend the velocity vector toward where the
+    // nose points (deg/s). This is what lets you pull out of a dive and what turns
+    // a banked nose into a curving flight path.
+    [SerializeField] private float liftTurnRate = 160f;
+    // Airspeed at which lift reaches full authority; below this control goes mushy
+    // (a soft near-stall), above it stays crisp.
+    [SerializeField] private float liftFullSpeed = 6f;
+    // Quadratic air drag — sets the terminal dive speed (≈ sqrt(gravity / airDrag)).
+    [SerializeField] private float airDrag = 0.045f;
+    // Lowest forward airspeed we let the glide settle to, so control never dies.
+    [SerializeField] private float minGlideSpeed = 3f;
+    [SerializeField] private float speedRegain = 2f;
+    // Hard cap on overall airspeed.
+    [SerializeField] private float maxGlideSpeed = 22f;
+    // Forward speed injected when the squirrel runs off an edge into a glide, so it
+    // transitions into flight instead of dropping from a standstill.
+    [SerializeField] private float glideTakeoffSpeed = 6f;
+    // Flip these if a forward tilt climbs instead of dives, or a right tilt banks
+    // left — depends on how the phone axes are wired.
+    [SerializeField] private bool invertGlidePitch = false;
+    [SerializeField] private bool invertGlideRoll = false;
 
     [Header("Surface Detection")]
     [SerializeField] private LayerMask solidSurfaceMask;
@@ -63,8 +100,6 @@ public class SquirrelController : MonoBehaviour
     // How long after losing grip we keep holding the surface orientation
     // before righting up. Smooths out single-frame probe misses.
     [SerializeField] private float groundCoyoteTime = 0.2f;
-    // How fast we ease back to world-up once genuinely airborne/gliding.
-    [SerializeField] private float airRightingSpeed = 4f;
 
     [Header("Collision")]
     [SerializeField] private float collisionRadius = 0.25f;
@@ -82,7 +117,6 @@ public class SquirrelController : MonoBehaviour
     private Vector3 airVelocity;
     private float ignoreSurfaceUntilTime;
     private float lastGroundedTime = -999f;
-    private Vector3 airAlignUp = Vector3.up;
 
     private Vector2 phoneMove;
 
@@ -101,6 +135,8 @@ public class SquirrelController : MonoBehaviour
             Keyboard.current.spaceKey.wasPressedThisFrame;
 
         // `grounded` here is the result of the previous frame's stick test.
+        bool groundedAtFrameStart = grounded;
+
         if (grounded && jumpPressed)
         {
             Jump(moveInput);
@@ -113,7 +149,7 @@ public class SquirrelController : MonoBehaviour
         }
         else
         {
-            GlideWithGlobalGravity(moveInput);
+            GlideWingsuit(moveInput);
         }
 
         // A single probe, taken after we've moved, is the only thing that drives
@@ -125,6 +161,14 @@ public class SquirrelController : MonoBehaviour
         else
         {
             grounded = false;
+        }
+
+        // Ran off an edge without jumping: carry our momentum into the glide so the
+        // wingsuit eases into flight instead of dropping from a dead stop. Jumps
+        // already set airVelocity, so the magnitude guard leaves them untouched.
+        if (groundedAtFrameStart && !grounded && airVelocity.sqrMagnitude < 0.01f)
+        {
+            airVelocity = transform.forward * glideTakeoffSpeed;
         }
 
         AlignToSurface();
@@ -351,44 +395,88 @@ public class SquirrelController : MonoBehaviour
         SafeMove(moveDirection * moveSpeed * Time.deltaTime);
     }
 
-    private void GlideWithGlobalGravity(Vector2 moveInput)
+    // Wingsuit flight. Two coupled halves: the controls set the body's attitude
+    // (roll / pitch / yaw like an aircraft), and a small flight model turns that
+    // attitude into velocity (lift, gravity, drag). Called every airborne frame.
+    private void GlideWingsuit(Vector2 moveInput)
     {
-        if (Mathf.Abs(moveInput.x) > 0.01f)
-        {
-            float yawAmount = moveInput.x * glideTurnSpeed * Time.deltaTime;
-            transform.Rotate(Vector3.up, yawAmount, Space.World);
-        }
+        UpdateFlightAttitude(moveInput);
+        UpdateFlightVelocity();
 
-        Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+        SafeMove(airVelocity * Time.deltaTime);
+    }
 
-        if (forward.sqrMagnitude < 0.001f && cameraTransform != null)
-        {
-            forward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
-        }
+    // Roll / pitch are self-centering: input picks a target bank/pitch angle and we
+    // steer the body toward it, so releasing the stick eases back to level. Banking
+    // drives a coordinated turn — yaw follows roll, exactly like banking a plane.
+    private void UpdateFlightAttitude(Vector2 moveInput)
+    {
+        float rollInput  = invertGlideRoll  ? -moveInput.x : moveInput.x;
+        // Default: push forward (W / tilt the phone forward) drops the nose to dive.
+        float pitchInput = invertGlidePitch ? moveInput.y : -moveInput.y;
 
-        if (forward.sqrMagnitude < 0.001f)
-        {
-            forward = transform.forward;
-        }
+        // Current attitude measured against the world horizon.
+        float currentPitch = Mathf.Asin(Mathf.Clamp(transform.forward.y, -1f, 1f)) * Mathf.Rad2Deg; // + = nose up
+        float currentBank  = Mathf.Asin(Mathf.Clamp(-transform.right.y, -1f, 1f)) * Mathf.Rad2Deg;   // + = rolled right
 
-        float controlledForwardSpeed =
-            glideForwardSpeed +
-            moveInput.y * glideForwardControl;
+        float targetPitch = pitchInput * maxPitchAngle;
+        float targetBank  = rollInput * maxBankAngle;
 
-        controlledForwardSpeed = Mathf.Max(0f, controlledForwardSpeed);
+        // Proportional steering toward the target attitude, rate-limited. Note the
+        // error is (current - target): in Unity a +rate about the body's right axis
+        // pitches the nose DOWN and a +rate about its forward axis banks LEFT, so the
+        // rate that reduces the error is the negative of the naive (target - current).
+        float pitchRate = Mathf.Clamp((currentPitch - targetPitch) * attitudeGain, -maxPitchRate, maxPitchRate);
+        float rollRate  = Mathf.Clamp((currentBank - targetBank) * attitudeGain, -maxRollRate, maxRollRate);
 
+        // Coordinated-turn yaw: a banked wing turns the aircraft (ω = g·tanφ / v).
+        float speed = Mathf.Max(airVelocity.magnitude, 1f);
+        float yawRate = (gravity * Mathf.Tan(currentBank * Mathf.Deg2Rad) / speed) * Mathf.Rad2Deg * turnCoordination;
+        yawRate = Mathf.Clamp(yawRate, -maxTurnRate, maxTurnRate);
+
+        // Heading turns about world up; pitch and roll about the body's own axes.
+        transform.rotation =
+            Quaternion.AngleAxis(yawRate * Time.deltaTime, Vector3.up) *
+            transform.rotation *
+            Quaternion.AngleAxis(pitchRate * Time.deltaTime, Vector3.right) *
+            Quaternion.AngleAxis(rollRate * Time.deltaTime, Vector3.forward);
+    }
+
+    // Turns the body's attitude into motion: gravity always pulls, the wing redirects
+    // the velocity toward where the nose points (so you dive to gain speed and pull up
+    // to climb), and drag caps the top speed.
+    private void UpdateFlightVelocity()
+    {
+        Vector3 forward = transform.forward;
+
+        // Gravity is always acting.
         airVelocity += Vector3.down * gravity * Time.deltaTime;
 
-        if (airVelocity.y < -maxFallSpeed)
+        // Lift bends the velocity vector toward the nose. Authority grows with
+        // airspeed, so slow flight feels soft (near-stall) and fast flight is crisp.
+        float speed = airVelocity.magnitude;
+        if (speed > 0.01f)
         {
-            airVelocity.y = -maxFallSpeed;
+            float authority = Mathf.Clamp01(speed / Mathf.Max(liftFullSpeed, 0.01f));
+            float maxRadians = liftTurnRate * Mathf.Deg2Rad * authority * Time.deltaTime;
+            Vector3 steeredDir = Vector3.RotateTowards(airVelocity / speed, forward, maxRadians, 0f);
+            airVelocity = steeredDir * speed;
         }
 
-        Vector3 glideMovement =
-            airVelocity +
-            forward * controlledForwardSpeed;
+        // Quadratic drag → natural terminal speed.
+        airVelocity -= airVelocity * (speed * airDrag * Time.deltaTime);
 
-        SafeMove(glideMovement * Time.deltaTime);
+        // Never let forward airspeed bleed away to nothing, or the controls go dead.
+        float forwardSpeed = Vector3.Dot(airVelocity, forward);
+        if (forwardSpeed < minGlideSpeed)
+        {
+            airVelocity += forward * (minGlideSpeed - forwardSpeed) * speedRegain * Time.deltaTime;
+        }
+
+        if (airVelocity.sqrMagnitude > maxGlideSpeed * maxGlideSpeed)
+        {
+            airVelocity = airVelocity.normalized * maxGlideSpeed;
+        }
     }
 
     private void SafeMove(Vector3 movement)
@@ -458,30 +546,21 @@ public class SquirrelController : MonoBehaviour
 
     private void AlignToSurface()
     {
-        Vector3 targetUp;
-
         // Hold the surface orientation while grounded, and for a short coyote
         // window after losing grip, so brief probe misses (common on curved
         // trunks or while crossing onto an inverted surface) don't make the
         // squirrel snap back to its neutral upright pose.
-        if (grounded || Time.time - lastGroundedTime < groundCoyoteTime)
-        {
-            targetUp = surfaceNormal;
-            airAlignUp = surfaceNormal;
-        }
-        else
-        {
-            // Genuinely airborne: ease back toward world up instead of
-            // requesting an instant 180° flip (the ambiguous flip is what
-            // looks like a violent snap when you're upside down).
-            airAlignUp = Vector3.Slerp(
-                airAlignUp,
-                Vector3.up,
-                airRightingSpeed * Time.deltaTime
-            ).normalized;
+        bool holdingSurface = grounded || Time.time - lastGroundedTime < groundCoyoteTime;
 
-            targetUp = airAlignUp;
+        if (!holdingSurface)
+        {
+            // Genuinely gliding: the wingsuit flight model fully owns roll / pitch /
+            // yaw. Don't right toward world up here or we'd cancel every bank and
+            // dive. Landing re-aligns from whatever attitude we're in.
+            return;
         }
+
+        Vector3 targetUp = surfaceNormal;
 
         // Rotate about the head anchor (not the transform pivot) so the front of
         // the body / camera stays put and the tail swings instead — this hides
