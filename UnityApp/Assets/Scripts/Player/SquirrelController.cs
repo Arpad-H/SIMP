@@ -111,6 +111,18 @@ public class SquirrelController : MonoBehaviour
     [SerializeField] private bool usePhoneInput = true;
     [SerializeField] private bool combinePhoneWithKeyboard = true;
 
+    [Header("Sounds")]
+    public AudioSource audioSourceOneShot;
+    public AudioSource audioSourceLoop;
+    public AudioClip jumpSound;
+    public AudioClip flySound;
+    public AudioClip landSound;
+    public AudioClip walkSound;
+
+    private AudioClip currentLoopClip;
+    private bool hasAudioState;
+    private bool wasGroundedLastFrame;
+
     private Vector3 surfaceNormal = Vector3.up;
     private Vector3 lastSurfaceNormal = Vector3.up;
     private bool grounded;
@@ -125,6 +137,7 @@ public class SquirrelController : MonoBehaviour
         cameraTransform = Camera.main != null ? Camera.main.transform : null;
         oscReceiver = FindAnyObjectByType<OSCReceiver>();
     }
+
 
     private void Update()
     {
@@ -172,7 +185,77 @@ public class SquirrelController : MonoBehaviour
         }
 
         AlignToSurface();
+        
+        //Audio Handling
+        UpdateAudio(moveInput);
+
+       
+
+        
     }
+
+    private void UpdateAudio(Vector2 moveInput)
+{
+    if (audioSourceLoop == null)
+        return;
+
+    bool isMovingOnGround = grounded && moveInput.sqrMagnitude > 0.01f;
+
+    if (hasAudioState && !wasGroundedLastFrame && grounded)
+    {
+        audioSourceOneShot.PlayOneShot(landSound);
+    }
+
+    if (isMovingOnGround)
+    {
+        PlayLoop(walkSound);
+    }
+    else if (!grounded)
+    {
+        PlayLoop(flySound);
+    }
+    else
+    {
+        StopLoop();
+    }
+
+    wasGroundedLastFrame = grounded;
+    hasAudioState = true;
+}
+
+private void PlayLoop(AudioClip clip)
+{
+    if (clip == null)
+    {
+        StopLoop();
+        return;
+    }
+
+    if (currentLoopClip == clip && audioSourceLoop.isPlaying)
+        return;
+
+    audioSourceLoop.Stop();
+    audioSourceLoop.clip = clip;
+    audioSourceLoop.loop = true;
+    audioSourceLoop.Play();
+
+    currentLoopClip = clip;
+}
+
+private void StopLoop()
+{
+    if (audioSourceLoop == null)
+        return;
+
+    if (!audioSourceLoop.isPlaying && currentLoopClip == null)
+        return;
+
+    audioSourceLoop.Stop();
+    audioSourceLoop.loop = false;
+    audioSourceLoop.clip = null;
+
+    currentLoopClip = null;
+}
 
     private Vector2 GetMoveInput()
     {
@@ -234,6 +317,8 @@ public class SquirrelController : MonoBehaviour
         grounded = false;
 
         ignoreSurfaceUntilTime = Time.time + jumpSurfaceIgnoreTime;
+
+        audioSourceOneShot.PlayOneShot(jumpSound);
     }
     // The probe point on the body, near the head. Offset forward so the probe
     // leads in the direction we face, and (optionally) up toward the head.
@@ -375,10 +460,18 @@ public class SquirrelController : MonoBehaviour
 
         transform.position +=
             surfaceNormal * correction * Mathf.Clamp01(heightCorrectSpeed * Time.deltaTime);
+        
+        
     }
 
     private void MoveAlongSurface(Vector2 moveInput)
-    {
+    {   
+        //audioSource.clip = walkSound;
+        //audioSource.loop = true;
+        //audioSource.Play();
+
+        //TODO find stop position
+
         // A / D rotate around the current surface normal.
         if (Mathf.Abs(moveInput.x) > 0.01f)
         {
@@ -393,6 +486,9 @@ public class SquirrelController : MonoBehaviour
         Vector3 moveDirection = moveForward * moveInput.y;
 
         SafeMove(moveDirection * moveSpeed * Time.deltaTime);
+
+
+        
     }
 
     // Wingsuit flight. Two coupled halves: the controls set the body's attitude
