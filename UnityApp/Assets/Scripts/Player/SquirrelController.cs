@@ -17,6 +17,8 @@ public class SquirrelController : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private OSCReceiver oscReceiver;
+    [Tooltip("Source of the phone jump gesture. Found automatically in the scene if left empty.")]
+    [SerializeField] private PhoneGestureDetector gestureDetector;
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 4f;
@@ -119,11 +121,20 @@ public class SquirrelController : MonoBehaviour
     private float lastGroundedTime = -999f;
 
     private Vector2 phoneMove;
+    private bool jumpRequested; // set by the phone jump gesture, consumed next Update
+
+    // Reference-counted movement lock (e.g. held while the squirrel is eating a peanut). Several
+    // systems can lock independently; the squirrel can move again only once every lock is released.
+    private int moveLockCount;
+    public bool MovementLocked => moveLockCount > 0;
+    public void AddMovementLock() => moveLockCount++;
+    public void RemoveMovementLock() => moveLockCount = Mathf.Max(0, moveLockCount - 1);
 
     private void Reset()
     {
         cameraTransform = Camera.main != null ? Camera.main.transform : null;
         oscReceiver = FindAnyObjectByType<OSCReceiver>();
+        gestureDetector = FindAnyObjectByType<PhoneGestureDetector>();
     }
 
     private void Update()
@@ -131,13 +142,14 @@ public class SquirrelController : MonoBehaviour
         Vector2 moveInput = GetMoveInput();
 
         bool jumpPressed =
-            Keyboard.current != null &&
-            Keyboard.current.spaceKey.wasPressedThisFrame;
+            (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+            || jumpRequested;
+        jumpRequested = false; // consume it whether or not we actually jumped this frame
 
         // `grounded` here is the result of the previous frame's stick test.
         bool groundedAtFrameStart = grounded;
 
-        if (grounded && jumpPressed)
+        if (grounded && jumpPressed && !MovementLocked)
         {
             Jump(moveInput);
         }
@@ -176,6 +188,10 @@ public class SquirrelController : MonoBehaviour
 
     private Vector2 GetMoveInput()
     {
+        // Frozen while eating (or any other lock): ignore all movement commands.
+        if (MovementLocked)
+            return Vector2.zero;
+
         Vector2 keyboardInput = Vector2.zero;
 
         if (Keyboard.current != null)
@@ -636,16 +652,31 @@ public class SquirrelController : MonoBehaviour
     {
         if (oscReceiver != null)
             oscReceiver.OnMove += HandlePhoneMove;
+
+        if (gestureDetector == null)
+            gestureDetector = FindAnyObjectByType<PhoneGestureDetector>();
+
+        if (gestureDetector != null)
+            gestureDetector.OnJumpDetected += RequestJump;
     }
 
     private void OnDisable()
     {
         if (oscReceiver != null)
             oscReceiver.OnMove -= HandlePhoneMove;
+
+        if (gestureDetector != null)
+            gestureDetector.OnJumpDetected -= RequestJump;
     }
     private void HandlePhoneMove(Vector2 move)
     {
         phoneMove = move;
+    }
+
+    // Phone "lift & return" gesture -> queue a jump, handled in Update exactly like the space key.
+    private void RequestJump()
+    {
+        jumpRequested = true;
     }
 
 }
