@@ -62,6 +62,16 @@ public class PhoneGestureDetector : MonoBehaviour
     [Range(90f, 180f)]
     [SerializeField] private float reversalAngle = 100f;
 
+    [Header("Continuous shake (held actions, e.g. eating a nut)")]
+    [Tooltip("Once this many reversals occur close together, IsShaking turns on and stays on while " +
+             "the shaking continues. Unlike the one-shot shake above, this drives held actions.")]
+    [SerializeField] private int continuousShakeReversals = 2;
+
+    [Tooltip("Each reversal keeps IsShaking alive for this long. If no new reversal arrives within " +
+             "this window, the shaking is considered to have stopped. Wider = more forgiving of slow/" +
+             "gentle shakes (fewer drop-outs), at the cost of taking slightly longer to release.")]
+    [SerializeField] private float continuousShakeWindow = 0.6f;
+
     [Header("Jump -> lift & return")]
     [Tooltip("Peak magnitude the lift must reach to qualify as a jump (enforces 'quick' lift).")]
     [SerializeField] private float jumpMinPeak = 6.0f;
@@ -91,6 +101,13 @@ public class PhoneGestureDetector : MonoBehaviour
     public event Action OnJumpDetected;
     public event Action OnEatNutDetected;
 
+    /// <summary>
+    /// True while the phone is being actively shaken back and forth. Unlike the one-shot
+    /// <see cref="onEatNut"/> event, this stays true for the whole duration of the shaking, so it
+    /// can gate held actions such as filling a peanut's eat-progress bar over several seconds.
+    /// </summary>
+    public bool IsShaking { get; private set; }
+
     [Header("Debug")]
     [Tooltip("Log every detected gesture to the Console so you can verify separation.")]
     [SerializeField] private bool logDetections = true;
@@ -110,6 +127,11 @@ public class PhoneGestureDetector : MonoBehaviour
 
     private float lastActionTime = -999f;
     private float lastSampleTime;
+
+    // Continuous-shake signal: counts reversals that arrive close together, independent of the
+    // one-shot jump/shake state machine above.
+    private float lastReversalTime = -999f;
+    private int sustainedReversals;
 
     // High-pass state for the /accel fallback (rough running estimate of gravity).
     private Vector3 gravityEstimate;
@@ -153,6 +175,13 @@ public class PhoneGestureDetector : MonoBehaviour
         // Safety net: if the sensor stream stalls mid-gesture, don't get stuck in Active.
         if (state == State.Active && Time.time - lastSampleTime > streamTimeout)
             ResetGesture(State.Idle);
+
+        // The continuous shake turns off once reversals stop arriving.
+        if (IsShaking && Time.time - lastReversalTime > continuousShakeWindow)
+        {
+            IsShaking = false;
+            sustainedReversals = 0;
+        }
     }
 
     // Called once per incoming acceleration sample (main thread, via uOSC).
@@ -245,6 +274,10 @@ public class PhoneGestureDetector : MonoBehaviour
             swingDir = dir;
             if (state == State.Active)
                 gestureReversals++;
+
+            // Feed the continuous-shake signal too. This runs regardless of state (even during
+            // cooldown), so a sustained shake keeps IsShaking alive between one-shot fires.
+            RegisterReversalForShakeSignal();
         }
         else if (dot > 0.5f)
         {
@@ -252,6 +285,23 @@ public class PhoneGestureDetector : MonoBehaviour
             swingDir = dir;
         }
         // Otherwise (roughly orthogonal): keep the current swing direction, don't count it.
+    }
+
+    // Reversals that arrive within continuousShakeWindow of each other accumulate; once enough
+    // pile up the phone is considered to be shaking, and it stays that way until the reversals stop
+    // (handled in Update). Kept separate from the one-shot gestureReversals so the two never fight.
+    private void RegisterReversalForShakeSignal()
+    {
+        float now = Time.time;
+
+        sustainedReversals = (now - lastReversalTime <= continuousShakeWindow)
+            ? sustainedReversals + 1
+            : 1;
+
+        lastReversalTime = now;
+
+        if (sustainedReversals >= continuousShakeReversals)
+            IsShaking = true;
     }
 
     private void Fire(bool isShake, float now)
