@@ -444,11 +444,11 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 5637463570277858935, guid: d09f38e0f944a2f4b90473f9b15c50cb, type: 2}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 2f01fd17ff3ef644f89b403b5d8ac89a, type: 3}
+  m_Resource: {fileID: 8300000, guid: 18925fa6fbeda6e4ab43677b07ab1b25, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -541,11 +541,11 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 8950563966043553463, guid: d09f38e0f944a2f4b90473f9b15c50cb, type: 2}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 6fa85f94d7cbbf3408d9277a15786565, type: 3}
+  m_Resource: {fileID: 8300000, guid: 472fc0fdc8d16cd419d927a7a3172bcb, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -4704,10 +4704,10 @@ MonoBehaviour:
   combinePhoneWithKeyboard: 1
   audioSourceOneShot: {fileID: 2053316495}
   audioSourceLoop: {fileID: 74005813}
-  jumpSound: {fileID: 8300000, guid: 2bc3bbf464bc07f409000bf7b5b35417, type: 3}
-  flySound: {fileID: 8300000, guid: 1432cc2845ae33a48a01df4ee705ebc0, type: 3}
-  landSound: {fileID: 8300000, guid: d9a4ddbb39c7c8d4c82087f4bccfbe1e, type: 3}
-  walkSound: {fileID: 8300000, guid: 077693cb15cfe7240be3aa610a98a732, type: 3}
+  jumpSound: {fileID: 8300000, guid: 1fade32d3ce576b4d9302dc4ee79deb4, type: 3}
+  flySound: {fileID: 8300000, guid: 124b622bc7dddc744a7a4ce88af6bf34, type: 3}
+  landSound: {fileID: 8300000, guid: bc756afe2b2f7ac4fb969228442d5037, type: 3}
+  walkSound: {fileID: 8300000, guid: 81a46f2c8a6b70540b122a8f1fbda0dd, type: 3}
 --- !u!4 &701574147 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4673637763984061444, guid: 7fee3246c86876f4491e35ad453c2b47, type: 3}
