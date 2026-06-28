@@ -104,6 +104,11 @@ public class SquirrelController : MonoBehaviour
     [SerializeField] private float groundCoyoteTime = 0.2f;
 
     [Header("Collision")]
+    // Extra layers that BLOCK movement but are NOT walkable — e.g. invisible fence
+    // walls used to pen the squirrel in. These are combined with solidSurfaceMask for
+    // collision only; the squirrel never probes, sticks or aligns to them, so it slides
+    // along a barrier instead of climbing it. Leave empty for the original behaviour.
+    [SerializeField] private LayerMask obstacleMask;
     [SerializeField] private float collisionRadius = 0.25f;
     [SerializeField] private float skinWidth = 0.03f;
     [SerializeField] private int slideIterations = 3;
@@ -628,7 +633,7 @@ private void StopLoop()
             collisionRadius,
             direction,
             distance,
-            solidSurfaceMask,
+            solidSurfaceMask | obstacleMask,
             QueryTriggerInteraction.Ignore
         );
 
