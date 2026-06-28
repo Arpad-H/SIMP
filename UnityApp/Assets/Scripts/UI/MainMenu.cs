@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class MainMenu : MonoBehaviour
 {
@@ -7,8 +8,27 @@ public class MainMenu : MonoBehaviour
     public GameObject CreditsPanel;
     public GameObject readyButton;
     public GameObject cancelButton;
+    public GameObject ControllPanel;
+    public GameObject qrCodeConnection;
+    
     public TextMeshProUGUI playButtonText;
+
+    [Header("Companion app")]
+    [Tooltip("Invoked when the phone companion app connects (the /hello OSC signal relayed by OSCReceiver).")]
+    public UnityEvent onAppConnected;
+
     private bool vrPlayerReady = false;
+
+    private void OnEnable()
+    {
+        OSCReceiver.OnAppConnected += AppConnected;
+    }
+
+    private void OnDisable()
+    {
+        OSCReceiver.OnAppConnected -= AppConnected;
+    }
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -42,6 +62,16 @@ public class MainMenu : MonoBehaviour
     {
         
     }
+    public void ShowControlls()
+    {
+        ControllPanel.SetActive(true);
+    }
+    public void HideControlls()
+    {
+         ControllPanel.SetActive(false);
+    }
+
+    
     public void VRPlayerReady()
     {
         vrPlayerReady = true;
@@ -55,5 +85,17 @@ public class MainMenu : MonoBehaviour
         readyButton.SetActive(true);
         cancelButton.SetActive(false);
         playButtonText.text = "[VR PLAYER NOT READY]";
+    }
+
+    /// <summary>
+    /// Called when the phone companion app connects, via the /hello signal relayed by
+    /// <see cref="OSCReceiver.OnAppConnected"/>. Wire menu reactions onto <see cref="onAppConnected"/>
+    /// in the Inspector (e.g. show a "controller connected" message or enable the ready button).
+    /// </summary>
+    public void AppConnected()
+    {
+        qrCodeConnection.SetActive(false);
+        Debug.Log("Companion app connected");
+        onAppConnected?.Invoke();
     }
 }

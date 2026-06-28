@@ -175,7 +175,7 @@ private fun ConnectScreen(
     onConnect: (String, Int) -> Unit,
 ) {
     var ip by rememberSaveable { mutableStateOf("") }
-    var port by rememberSaveable { mutableStateOf("9000") }
+    var port by rememberSaveable { mutableStateOf("9001") }
     val portNum = port.toIntOrNull()
     val canConnect = ip.isNotBlank() && portNum != null && portNum in 1..65535
 

@@ -11,6 +11,11 @@ public class OSCReceiver : MonoBehaviour
     // The argument is which zone was hit: 0 = bottom-left, 1 = bottom-right.
     public Action<int> OnTap;
 
+    // Raised when the companion app announces it has connected (the /hello handshake, sent by the
+    // phone as soon as it connects via QR scan or manual IP). Static so UI in any scene — e.g. the
+    // main menu, which holds no direct reference to this receiver — can react to it.
+    public static event Action OnAppConnected;
+
     // Raw motion streams from the phone, mapped into Unity's left-handed space.
     public Action<Vector3> OnAcceleration;        // /accel    m/s^2 (includes gravity)
     public Action<Vector3> OnLinearAcceleration;  // /linaccel m/s^2 (gravity removed)
@@ -95,6 +100,7 @@ public class OSCReceiver : MonoBehaviour
             case "/hello":
             {
                 Debug.Log("Phone connected");
+                OnAppConnected?.Invoke();
                 break;
             }
 
