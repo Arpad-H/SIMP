@@ -10837,6 +10837,114 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9334fd4876bf12346ac49bdce660b303, type: 3}
   m_PrefabInstance: {fileID: 296221980}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1067508398
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1067508400}
+  - component: {fileID: 1067508399}
+  - component: {fileID: 1067508401}
+  m_Layer: 0
+  m_Name: PeanutRadar
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1067508399
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1067508398}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b5463aca4907cc49af11fe6fd3acf7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PeanutRadar
+  sweepPeriod: 4
+  clockwise: 1
+  blipLinger: 2
+  fadeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  radarRange: 30
+  clampOutOfRangeToRim: 1
+  center: {fileID: 676264101}
+  headingReference: {fileID: 1960763809}
+  orientation: 0
+  rescanInterval: 0.5
+  onPing:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!4 &1067508400
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1067508398}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1403.685, y: 0.00001, z: 850.7263}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1067508401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1067508398}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dbc2605875a56442955d2a147d5cf45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PeanutRadarUI
+  radar: {fileID: 1067508399}
+  size: 260
+  corner: 1
+  margin: {x: 24, y: 24}
+  faceColor: {r: 0.06, g: 0.16, b: 0.09, a: 1}
+  ringColor: {r: 0.3, g: 0.62, b: 0.34, a: 1}
+  rimColor: {r: 0.24, g: 0.16, b: 0.09, a: 1}
+  sweepColor: {r: 0.55, g: 1, b: 0.45, a: 0.8}
+  sweepTrailDegrees: 130
+  blipNearColor: {r: 1, g: 0.82, b: 0.36, a: 1}
+  blipFarColor: {r: 0.78, g: 0.85, b: 0.45, a: 1}
+  centerColor: {r: 0.95, g: 0.85, b: 0.7, a: 1}
+  blipSize: 20
+  blipMinScale: 0.55
+  blipMaxScale: 1.25
 --- !u!1001 &1078485633
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -20801,3 +20909,4 @@ SceneRoots:
   - {fileID: 1308418668}
   - {fileID: 1943502868}
   - {fileID: 1589868427}
+  - {fileID: 1067508400}
