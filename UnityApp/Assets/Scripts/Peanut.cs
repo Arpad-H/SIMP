@@ -4,13 +4,13 @@ using UnityEngine.UI;
 
 /// <summary>
 /// A peanut the squirrel can eat. The peanut hovers and spins as an idle collectible. When the
-/// squirrel is standing inside the peanut's trigger collider AND the player is shaking the phone,
-/// the eat progress fills up over <see cref="timeToEat"/> seconds; once it reaches 1 the nut is
-/// eaten and consumed. While actively eating, the squirrel's movement is locked so it stays put.
+/// squirrel is standing inside the peanut's trigger collider, each tap on the companion play screen
+/// advances the eat progress by one step; once <see cref="tapsToEat"/> taps have landed the nut is
+/// fully eaten and consumed. Progress persists while the squirrel lingers (it never decays),
+/// mirroring <c>CutProgress</c>.
 ///
-/// Proximity comes from this object's trigger collider (auto-created if missing); the "is the
-/// phone shaking" signal comes from <see cref="PhoneGestureDetector.IsShaking"/>. Progress
-/// persists while the squirrel lingers (it never decays), mirroring <c>CutProgress</c>.
+/// Proximity comes from this object's trigger collider (auto-created if missing); the tap signal
+/// comes from <see cref="OSCReceiver.OnTap"/> (the companion's /tap message).
 /// </summary>
 public class Peanut : MonoBehaviour
 {
@@ -22,18 +22,14 @@ public class Peanut : MonoBehaviour
     [SerializeField] private float rotationSpeed = 50f;   // Degrees per second
 
     [Header("Eating")]
-    [Tooltip("Seconds of continuous shaking (with the squirrel in range) needed to fully eat the nut.")]
-    [SerializeField] private float timeToEat = 2f;
+    [Tooltip("Number of taps (with the squirrel in range) needed to fully eat the nut. Each tap adds " +
+             "1 / this much progress.")]
+    [SerializeField] private int tapsToEat = 5;
 
     [Tooltip("Radius of the trigger that defines 'close enough'. Only used when this object has no " +
              "Collider yet and one is created automatically; if you add your own trigger collider " +
              "it is used as-is.")]
     [SerializeField] private float eatRange = 1.5f;
-
-    [Tooltip("How long the squirrel stays frozen after the last detected shake. Bridges the gaps " +
-             "in a gentle shake (so incidental tilt never leaks into movement) and gives a short " +
-             "tail before the squirrel can walk away.")]
-    [SerializeField] private float moveLockHold = 0.5f;
 
     [Header("Falling")]
     [Tooltip("Downward acceleration (m/s^2) applied while the nut drops after its tree is sliced.")]
@@ -50,50 +46,57 @@ public class Peanut : MonoBehaviour
     [SerializeField] private float maxFallDistance = 100f;
 
     [Header("References")]
-    [Tooltip("Source of the shake signal. Found automatically in the scene if left empty.")]
-    [SerializeField] private PhoneGestureDetector gestureDetector;
+    [Tooltip("Source of the tap signal. Found automatically in the scene if left empty.")]
+    [SerializeField] private OSCReceiver oscReceiver;
 
     [Header("Eat Progress UI")]
     [Tooltip("Image (Image Type = Filled) whose fillAmount is driven by the eat progress 0..1.")]
     [SerializeField] private Image eatProgressFill;
 
-    [Tooltip("Object shown only while actively eating — e.g. the progress bar root. Defaults to the " +
-             "fill image's GameObject if left empty.")]
+    [Tooltip("Object shown only while the squirrel is in range — e.g. the progress bar root. Defaults " +
+             "to the fill image's GameObject if left empty.")]
     [SerializeField] private GameObject eatProgressUI;
 
     [Header("Events")]
     [Tooltip("Fired once when the nut has been fully eaten (hook up score, SFX, VFX, ...).")]
     public UnityEvent onEaten;
 
+    [Tooltip("Fired once when the lumberjack picks up this fallen nut (hook up score, SFX, VFX, ...).")]
+    public UnityEvent onCollected;
+
     /// <summary>0..1 progress toward eating this nut.</summary>
     public float EatProgress => eatProgress;
     public bool IsEaten => eaten;
+    public bool IsCollected => collected;
+    /// <summary>True once the nut has dropped off its tree — only then can the lumberjack collect it.</summary>
+    public bool HasDropped => hasDropped;
     public bool SquirrelInRange => squirrelInRange;
+
+    // Eaten by the squirrel or collected by the lumberjack — either way it's spoken for and out of play.
+    private bool Consumed => eaten || collected;
 
     private Vector3 startPosition;
     private float eatProgress;
     private bool eaten;
+    private bool collected;   // picked up by the lumberjack
+    private bool hasDropped;  // has fallen off its tree, so the lumberjack can now collect it
     private bool squirrelInRange;
 
     private bool falling;        // true while dropping to the ground after the tree was sliced
     private float fallVelocity;  // current downward speed during the drop
     private float groundY;       // world Y the nut settles (and then hovers) at once it lands
 
-    private SquirrelController squirrel; // the squirrel currently in range (captured on enter)
-    private bool isEating;               // true while the squirrel is frozen for this stretch
-    private float lastShakeTime = -999f; // time of the most recent shake sample, for the lock hold
-
     private void Awake()
     {
         EnsureTriggerCollider();
 
-        if (gestureDetector == null)
+        if (oscReceiver == null)
         {
-            gestureDetector = FindAnyObjectByType<PhoneGestureDetector>();
-            if (gestureDetector == null)
-                Debug.LogWarning($"{nameof(Peanut)} '{name}': no {nameof(PhoneGestureDetector)} in the " +
-                                 "scene, so shaking can't be detected. Add one (e.g. on the OSC " +
-                                 "receiver object) or assign it in the inspector.", this);
+            oscReceiver = FindAnyObjectByType<OSCReceiver>();
+            if (oscReceiver == null)
+                Debug.LogWarning($"{nameof(Peanut)} '{name}': no {nameof(OSCReceiver)} in the scene, " +
+                                 "so taps can't be received and the nut can't be eaten. Add one (e.g. " +
+                                 "on the OSC server object) or assign it in the inspector.", this);
         }
 
         if (eatProgressUI == null && eatProgressFill != null)
@@ -102,33 +105,33 @@ public class Peanut : MonoBehaviour
             eatProgressUI.SetActive(false);
     }
 
+    private void OnEnable()
+    {
+        if (oscReceiver != null)
+            oscReceiver.OnTap += HandleTap;
+    }
+
+    private void OnDisable()
+    {
+        if (oscReceiver != null)
+            oscReceiver.OnTap -= HandleTap;
+
+        // Don't leave the progress bar showing if we're disabled mid-bite.
+        ShowEatProgress(false);
+    }
+
     private void Start()
     {
         // Record the starting position so the hover is relative to where it was placed.
         startPosition = transform.position;
+
+        // Join the round so the manager can score this nut and know when every nut is gone.
+        GameManager.Instance?.RegisterNut(this);
     }
 
     private void Update()
     {
         UpdateMotion();
-
-        // Progress only on frames the phone is actually shaking and the squirrel is in range.
-        bool shakingNow = squirrelInRange && !eaten &&
-                          gestureDetector != null && gestureDetector.IsShaking;
-
-        if (shakingNow)
-        {
-            lastShakeTime = Time.time;
-            TryEatNut();
-        }
-
-        // Keep the squirrel frozen through the brief gaps in a gentle shake, and for a short tail
-        // afterwards, so incidental tilt while shaking never leaks into movement. The lock follows
-        // this held state, not the flickering instant-by-instant shake signal.
-        bool lockMovement = squirrelInRange && !eaten &&
-                            Time.time - lastShakeTime <= moveLockHold;
-
-        SetEating(lockMovement);
     }
 
     // Per-frame motion. Always spins. While hovering it bobs around its anchor; while falling
@@ -154,8 +157,11 @@ public class Peanut : MonoBehaviour
     /// </summary>
     public void Drop()
     {
-        if (falling || eaten)
+        if (falling || Consumed)
             return;
+
+        // From here on it's a fallen nut, so the lumberjack is allowed to scoop it up.
+        hasDropped = true;
 
         // It has fallen off the tree — detach so it becomes a free world object (surviving any later
         // teardown of the tree) and hovers in world space from here on. Keep its current world pose.
@@ -202,48 +208,47 @@ public class Peanut : MonoBehaviour
         transform.position = pos;
     }
 
-    /// <summary>
-    /// Advances the eat progress by one frame's worth. Safe to call every frame while shaking:
-    /// it only does anything when the squirrel is in range and the nut isn't eaten yet, and fully
-    /// eats the nut once <see cref="timeToEat"/> seconds of progress have accumulated.
-    /// </summary>
-    public void TryEatNut()
+    // One tap from the companion play screen. Advances the eat progress while the squirrel is in
+    // range; both tap zones (the side argument) feed eating equally. Fully eats the nut once
+    // tapsToEat taps have accumulated.
+    private void HandleTap(int side)
     {
-        if (eaten || !squirrelInRange || timeToEat <= 0f)
+        if (Consumed || !squirrelInRange)
             return;
 
-        eatProgress = Mathf.Clamp01(eatProgress + Time.deltaTime / timeToEat);
+        int taps = Mathf.Max(1, tapsToEat);
+        eatProgress = Mathf.Clamp01(eatProgress + 1f / taps);
         UpdateEatProgressVisual(eatProgress);
 
         if (eatProgress >= 1f)
             Eat();
     }
 
-    // Enters / leaves the "eating" state: locks the squirrel in place and shows the progress bar
-    // while eating, releases both when it stops. Idempotent, so it's safe to call from Eat/OnDisable.
-    private void SetEating(bool eating)
-    {
-        if (eating == isEating)
-            return;
-
-        isEating = eating;
-
-        if (squirrel != null)
-        {
-            if (eating) squirrel.AddMovementLock();
-            else        squirrel.RemoveMovementLock();
-        }
-
-        if (eatProgressUI != null)
-            eatProgressUI.SetActive(eating);
-    }
-
     private void Eat()
     {
         eaten = true;
-        SetEating(false); // release the movement lock / hide the bar before we vanish
+        ShowEatProgress(false); // hide the bar before we vanish
         Debug.Log($"[Peanut] eaten: {name}", this);
         onEaten?.Invoke();
+        GameManager.Instance?.NotifyNutEaten(this);
+        Destroy(gameObject);
+    }
+
+    /// <summary>
+    /// Pick this fallen nut up for the lumberjack. No-op unless the nut has dropped from its tree and
+    /// hasn't already been eaten or collected. Scores it for the lumberjack and removes the nut.
+    /// Called by <see cref="LumberjackHand"/> when one of the VR player's hands touches it.
+    /// </summary>
+    public void Collect()
+    {
+        if (Consumed || !hasDropped)
+            return;
+
+        collected = true;
+        ShowEatProgress(false); // safety: hide the bar before we vanish
+        Debug.Log($"[Peanut] collected by lumberjack: {name}", this);
+        onCollected?.Invoke();
+        GameManager.Instance?.NotifyNutCollected(this);
         Destroy(gameObject);
     }
 
@@ -254,26 +259,42 @@ public class Peanut : MonoBehaviour
             eatProgressFill.fillAmount = progress01;
     }
 
+    // Shows / hides the progress bar root, refreshing the fill to the current progress when shown.
+    private void ShowEatProgress(bool show)
+    {
+        if (eatProgressUI != null)
+            eatProgressUI.SetActive(show);
+
+        if (show)
+            UpdateEatProgressVisual(eatProgress);
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        var controller = other.GetComponentInParent<SquirrelController>();
-        if (controller == null)
+        if (other.GetComponentInParent<SquirrelController>() == null)
             return;
 
-        squirrel = controller;
         squirrelInRange = true;
+        if (!Consumed)
+            ShowEatProgress(true);
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.GetComponentInParent<SquirrelController>() != null)
-            squirrelInRange = false;
+        if (other.GetComponentInParent<SquirrelController>() == null)
+            return;
+
+        squirrelInRange = false;
+        ShowEatProgress(false);
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
-        // Never leave the squirrel frozen if we're disabled/destroyed mid-bite.
-        SetEating(false);
+        // Keep the manager's live-nut tally accurate however we're removed (eaten, collected, or
+        // torn down some other way). Nuts already resolved via eat/collect are ignored, so this
+        // never double-counts — it's the safety net that still ends the round if a nut is destroyed
+        // by some other path.
+        GameManager.Instance?.UnregisterNut(this);
     }
 
     // Guarantee a trigger collider that defines the eat range. Respects an existing collider (just

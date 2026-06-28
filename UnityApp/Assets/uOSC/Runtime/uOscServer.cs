@@ -1,4 +1,8 @@
 ﻿using UnityEngine;
+#if !NETFX_CORE
+using System.Net;
+using System.Net.Sockets;
+#endif
 
 namespace uOSC
 {
@@ -63,6 +67,8 @@ public class uOscServer : MonoBehaviour
 
         isStarted_ = true;
 
+        Debug.Log("[uOscServer] Server started on " + GetLocalIPAddress() + ":" + port);
+
         onServerStarted.Invoke(port);
     }
 
@@ -103,6 +109,27 @@ public class uOscServer : MonoBehaviour
         StopServer();
         StartServer();
         port_ = port;
+    }
+
+    static string GetLocalIPAddress()
+    {
+#if !NETFX_CORE
+        try
+        {
+            foreach (var ip in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    return ip.ToString();
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("[uOscServer] Could not resolve local IP: " + e.Message);
+        }
+#endif
+        return "unknown";
     }
 
     void UpdateMessage()
