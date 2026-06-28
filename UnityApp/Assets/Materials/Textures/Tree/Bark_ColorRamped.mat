@@ -8,10 +8,11 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Bark_ColorRamped
-  m_Shader: {fileID: 4800000, guid: a4c8f68acf7c9844e97a36914026acb1, type: 3}
+  m_Shader: {fileID: 4800000, guid: e25c6acb08fce6d4795c1af0e6a3eaf7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
+  m_ValidKeywords: []
+  m_InvalidKeywords:
   - _ALBEDOVERTEXCOLORMODE_REPLACE
   - _ALPHA_CUTOFF_ON
   - _AOMAP_ON
@@ -22,6 +23,7 @@ Material:
   - _FADEUVSET_UV1
   - _FADE_BURN_ON
   - _FADE_ON
+  - _GLITCHWORLDSPACE_ON
   - _GREYSCALESTAGE_BEFORELIGHTING
   - _HEIGHTGRADIENTPOSITIONSPACE_LOCAL
   - _HIGHLIGHTS_ON
@@ -42,8 +44,6 @@ Material:
   - _TEXTUREBLENDINGSOURCE_VERTEXCOLOR
   - _TRIPLANARNORMALSPACE_WORLD
   - _USE_WIND_VERTICAL_MASK
-  m_InvalidKeywords:
-  - _GLITCHWORLDSPACE_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
