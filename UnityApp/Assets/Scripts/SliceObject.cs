@@ -18,10 +18,14 @@ public class SliceObject : MonoBehaviour {
     [SerializeField] private VelocityEstimator velocityEstimator;
     [SerializeField] private LayerMask slicableLayer;
     [SerializeField] private Material crossSectionMaterial;
-    [Tooltip("Impulse (along the cut normal) that pushes the two halves apart once the cut completes.")]
-    [SerializeField] private float cutForce = 3;
+    [Tooltip("Separation speed (m/s, along the cut normal) given to each half when the cut completes. Independent of piece mass.")]
+    [SerializeField] private float cutForce = 1.5f;
+    [Tooltip("Mass assigned to each sliced half's Rigidbody. Higher = heavier/steadier and harder to shove around.")]
+    [SerializeField] private float slicedPieceMass = 5f;
     [Tooltip("Seconds of continuous sawing needed to cut all the way through an object.")]
     [SerializeField] private float timeToCut = 4f;
+    [Tooltip("After a piece is cut, how long (seconds) before it may be sliced again — stops the still-embedded blade from instantly shredding fresh halves.")]
+    [SerializeField] private float reSliceCooldown = 0.4f;
     [SerializeField] private AudioClip chainsawRefuelSound;
     [SerializeField] private AudioSource chainsawCutSound;
     [SerializeField] private AudioSource chainsawIdleSound;
@@ -83,13 +87,20 @@ public class SliceObject : MonoBehaviour {
             CutProgress cut = target.GetComponent<CutProgress>();
             if (cut == null) {
                 cut = target.AddComponent<CutProgress>();
-                cut.Begin(hit.point, ComputeCutNormal());
             }
 
-            cut.Advance(Time.fixedDeltaTime, timeToCut);
+            // Fresh halves carry a cooldown so the still-embedded blade can't re-slice
+            // them every frame; leave them be until it elapses, then lock the plane and saw.
+            if (!cut.OnCooldown) {
+                if (!cut.Initialized) {
+                    cut.Begin(hit.point, ComputeCutNormal());
+                }
 
-            if (cut.IsComplete) {
-                Slice(target, cut.PlanePoint, cut.PlaneNormal);
+                cut.Advance(Time.fixedDeltaTime, timeToCut);
+
+                if (cut.IsComplete) {
+                    Slice(target, cut.PlanePoint, cut.PlaneNormal);
+                }
             }
         }
     }
@@ -146,24 +157,59 @@ public class SliceObject : MonoBehaviour {
 
         if (hull != null) {
             GameObject upperHull = hull.CreateUpperHull(target, crossSectionMaterial);
-            SetupSlicedComponent(upperHull, planeNormal);
+            PlaceHull(upperHull, target.transform);
+            Collider upperCollider = SetupSlicedComponent(upperHull, planeNormal);
             GameObject lowerHull = hull.CreateLowerHull(target, crossSectionMaterial);
-            SetupSlicedComponent(lowerHull, -planeNormal);
+            PlaceHull(lowerHull, target.transform);
+            Collider lowerCollider = SetupSlicedComponent(lowerHull, -planeNormal);
+
+            // The two convex hulls share the cut face and overlap by the colliders'
+            // contact offset; without this the solver violently shoves them apart.
+            Physics.IgnoreCollision(upperCollider, lowerCollider);
+
+            // Keep the halves sliceable so they can be cut again, but give each a brief
+            // cooldown first: the blade is still inside them this instant and at
+            // timeToCut == 0 would otherwise re-slice them every frame into fragments.
             upperHull.layer = target.layer;
             lowerHull.layer = target.layer;
+            upperHull.AddComponent<CutProgress>().StartCooldown(reSliceCooldown);
+            lowerHull.AddComponent<CutProgress>().StartCooldown(reSliceCooldown);
 
-            print("HULLS: " + upperHull + " " + lowerHull);
-
+            // Disable the trunk this instant so a later physics substep in the SAME frame
+            // can't linecast it and slice it a second time (Destroy is deferred to end of
+            // frame, so until then its collider is still live and hittable).
+            target.SetActive(false);
             Destroy(target);
         }
     }
 
-    public void SetupSlicedComponent(GameObject slicedObject, Vector3 pushDirection) {
+    // EzySlice creates each hull as a parent-less object and copies the ORIGINAL's *local*
+    // transform onto it. That's only correct if the sliced object sat at the scene root;
+    // our trunk is a child of the tree prefab, so those local values resolve to the wrong
+    // world pose (origin, unrotated) and the half can spawn embedded in the terrain — which
+    // the solver then ejects violently. Snap each hull to the trunk's true WORLD pose.
+    private static void PlaceHull(GameObject hullObject, Transform source) {
+        hullObject.transform.position   = source.position;
+        hullObject.transform.rotation   = source.rotation;
+        hullObject.transform.localScale = source.lossyScale;
+    }
+
+    public Collider SetupSlicedComponent(GameObject slicedObject, Vector3 pushDirection) {
         Rigidbody rb = slicedObject.AddComponent<Rigidbody>();
+        rb.mass = slicedPieceMass;
+        // Continuous detection so a light, fast piece can't tunnel through the terrain.
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        // The hard guarantee against "explosions": cap how fast PhysX may eject this body
+        // out of an overlap. Depenetration speed ignores mass, so uncapped it launches
+        // pieces of any size; clamped low, any leftover overlap resolves as a gentle push.
+        rb.maxDepenetrationVelocity = 1f;
+
         MeshCollider collider = slicedObject.AddComponent<MeshCollider>();
         collider.convex = true;
         // Small nudge along the cut so the two halves part and drop, rather than exploding.
-        rb.AddForce(pushDirection.normalized * cutForce, ForceMode.Impulse);
+        // VelocityChange (not Impulse) so the separation speed stays independent of mass.
+        rb.AddForce(pushDirection.normalized * cutForce, ForceMode.VelocityChange);
+        return collider;
     }
 
     public void fueledUp() {

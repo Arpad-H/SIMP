@@ -13,6 +13,7 @@ public class CutProgress : MonoBehaviour
 {
     private bool initialized;
     private float progress; // 0..1, persists for the lifetime of this object
+    private float cooldown; // >0 = freshly spawned piece; ignore the blade until it elapses
 
     // Locked cut plane (set once, on first contact).
     private Vector3 planePoint;
@@ -20,8 +21,22 @@ public class CutProgress : MonoBehaviour
 
     public float   Progress    => progress;
     public bool    IsComplete  => progress >= 1f;
+    public bool    Initialized => initialized;
+    public bool    OnCooldown  => cooldown > 0f;
     public Vector3 PlanePoint  => planePoint;
     public Vector3 PlaneNormal => planeNormal;
+
+    private void FixedUpdate()
+    {
+        if (cooldown > 0f) cooldown -= Time.fixedDeltaTime;
+    }
+
+    /// <summary>Block (re)slicing for a moment after this piece is spawned from a cut, so a
+    /// still-embedded blade can't instantly carve it into a shower of fragments.</summary>
+    public void StartCooldown(float seconds)
+    {
+        cooldown = seconds;
+    }
 
     /// <summary>Call once, on first blade contact, to lock the cut plane.</summary>
     public void Begin(Vector3 entryPoint, Vector3 normal)
@@ -36,8 +51,12 @@ public class CutProgress : MonoBehaviour
     /// <summary>Advance the cut by dt seconds (timeToCut = seconds for a full cut-through).</summary>
     public void Advance(float deltaSeconds, float timeToCut)
     {
-        if (!initialized || timeToCut <= 0f) return;
-        progress = Mathf.Clamp01(progress + deltaSeconds / timeToCut);
+        if (!initialized) return;
+        // timeToCut <= 0 means "cut instantly" (and avoids a divide-by-zero);
+        // otherwise accumulate seconds of contact until we've sawn all the way through.
+        progress = timeToCut <= 0f
+            ? 1f
+            : Mathf.Clamp01(progress + deltaSeconds / timeToCut);
         UpdateProgressBar(progress);
     }
 

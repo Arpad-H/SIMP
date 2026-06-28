@@ -7,6 +7,10 @@ public class OSCReceiver : MonoBehaviour
     public Action<Quaternion> OnRotation;
     public Action<Vector2> OnMove;
 
+    // Fired once each time the player taps a corner tap-zone on the companion play screen (/tap).
+    // The argument is which zone was hit: 0 = bottom-left, 1 = bottom-right.
+    public Action<int> OnTap;
+
     // Raw motion streams from the phone, mapped into Unity's left-handed space.
     public Action<Vector3> OnAcceleration;        // /accel    m/s^2 (includes gravity)
     public Action<Vector3> OnLinearAcceleration;  // /linaccel m/s^2 (gravity removed)
@@ -98,6 +102,15 @@ public class OSCReceiver : MonoBehaviour
             {
                 Calibrate();
                 Debug.Log("Phone calibrated");
+                break;
+            }
+
+            case "/tap":
+            {
+                // Argument: 0 = bottom-left zone, 1 = bottom-right zone.
+                int side = message.values.Length > 0 ? Mathf.RoundToInt((float)message.values[0]) : 0;
+                OnTap?.Invoke(side);
+                Debug.Log($"Phone tapped ({(side == 1 ? "right" : "left")})");
                 break;
             }
         }

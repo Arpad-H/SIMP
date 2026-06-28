@@ -1525,7 +1525,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   crossSectionMaterial: {fileID: 2100000, guid: a31f539b1993b1646994e9bc086fb7a3, type: 2}
-  cutForce: 20
+  cutForce: 1.5
   chainsawRefuelSound: {fileID: 8300000, guid: af4f368f2f8e48545865dae3f21a15f1, type: 3}
   chainsawCutSound: {fileID: 6950021897969804529}
   chainsawIdleSound: {fileID: 780129849666425575}

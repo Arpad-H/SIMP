@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.simpanroidcompanion.net.OscClient
+import com.example.simpanroidcompanion.net.OscMessage
 import com.example.simpanroidcompanion.sensor.MotionSensors
 import com.example.simpanroidcompanion.ui.AppRoot
 import com.example.simpanroidcompanion.ui.Connection
@@ -53,6 +54,7 @@ class MainActivity : ComponentActivity() {
                     onConnect = { ip, port -> connect(Connection.Connected(ip, port)) },
                     onDisconnect = ::disconnect,
                     onCalibrate = ::calibrate,
+                    onTap = ::tap,
                 )
             }
         }
@@ -98,6 +100,12 @@ class MainActivity : ComponentActivity() {
     private fun calibrate() {
         if (!streaming) return
         osc.send(sensors.calibrationMessage())
+    }
+
+    /** Tell Unity the player tapped a corner zone (a one-off `/tap`; side 0 = left, 1 = right). */
+    private fun tap(side: Int) {
+        if (!streaming) return
+        osc.send(OscMessage("/tap", floatArrayOf(side.toFloat())))
     }
 
     private fun startStreaming() {

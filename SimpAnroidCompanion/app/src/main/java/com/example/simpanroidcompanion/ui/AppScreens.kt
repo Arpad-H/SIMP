@@ -1,10 +1,16 @@
 package com.example.simpanroidcompanion.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,12 +39,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Switch
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import com.example.simpanroidcompanion.sensor.MotionSensors
@@ -59,21 +70,26 @@ fun AppRoot(
     onConnect: (String, Int) -> Unit,
     onDisconnect: () -> Unit,
     onCalibrate: () -> Unit,
+    onTap: (Int) -> Unit,
 ) {
     Scaffold { padding ->
         when (connection) {
             is Connection.Disconnected ->
                 ConnectScreen(Modifier.padding(padding), status, onScan, onConnect)
             is Connection.Connected ->
-                ConnectedScreen(Modifier.padding(padding), sensors, connection, onDisconnect, onCalibrate)
+                ConnectedScreen(Modifier.padding(padding), sensors, connection, onDisconnect, onCalibrate, onTap)
         }
     }
 }
 
 /**
  * The connected experience. A prominent toggle swaps between the full sensor [DashboardScreen] and
- * the minimal [PlayScreen] (gyro ball + Calibrate). Both run off the same live connection, so
- * flipping the switch is instant — nothing reconnects or restarts the stream.
+ * the minimal [PlayScreen] (centre gyro + corner tap zones). Both run off the same live connection,
+ * so flipping the switch is instant — nothing reconnects or restarts the stream.
+ *
+ * Play mode locks the device to landscape (the [DisposableEffect] below); leaving play mode or the
+ * connection restores the normal orientation. The activity already declares
+ * `configChanges="orientation|screenSize"`, so this re-layouts in place without dropping the stream.
  */
 @Composable
 private fun ConnectedScreen(
@@ -82,8 +98,21 @@ private fun ConnectedScreen(
     connection: Connection.Connected,
     onDisconnect: () -> Unit,
     onCalibrate: () -> Unit,
+    onTap: (Int) -> Unit,
 ) {
     var playMode by rememberSaveable { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    DisposableEffect(playMode) {
+        val activity = context.findActivity()
+        activity?.requestedOrientation =
+            if (playMode) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
     Column(modifier.fillMaxSize()) {
         ModeToggle(
             playMode = playMode,
@@ -92,7 +121,7 @@ private fun ConnectedScreen(
         )
         Crossfade(targetState = playMode, modifier = Modifier.weight(1f), label = "mode") { play ->
             if (play) {
-                PlayScreen(sensors, onCalibrate)
+                PlayScreen(sensors, onCalibrate, onTap)
             } else {
                 DashboardScreen(Modifier, sensors, connection, onDisconnect)
             }
@@ -270,12 +299,14 @@ private fun DashboardScreen(
 }
 
 /**
- * Minimal in-game interface, laid out for a phone held in landscape: a large gyro ball plus a
- * Calibrate button. Calibrating captures the current pose as neutral — it recentres the on-screen
- * ball and (via [onCalibrate]) tells Unity to rebase all subsequent input on this orientation.
+ * Minimal in-game interface for a phone held in landscape (play mode locks the orientation). A small
+ * gyro ball sits in the centre and doubles as the Calibrate control: tapping it captures the current
+ * pose as neutral — recentring the ball and (via [onCalibrate]) telling Unity to rebase all
+ * subsequent input on this orientation. Two triangular tap zones in the bottom corners fire [onTap]
+ * with the zone that was hit (0 = left, 1 = right), each sending a one-off `/tap` to Unity.
  */
 @Composable
-private fun PlayScreen(sensors: MotionSensors, onCalibrate: () -> Unit) {
+private fun PlayScreen(sensors: MotionSensors, onCalibrate: () -> Unit, onTap: (Int) -> Unit) {
     val haptics = LocalHapticFeedback.current
     var neutral by remember { mutableStateOf(Vec3.ZERO) }
     val source = if (sensors.hasGravity) sensors.gravity else sensors.accel
@@ -286,46 +317,100 @@ private fun PlayScreen(sensors: MotionSensors, onCalibrate: () -> Unit) {
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().padding(20.dp)) {
-        if (maxWidth > maxHeight) {
-            // Landscape: ball on one half, Calibrate on the other.
-            val ball = minOf(maxHeight * 0.92f, maxWidth * 0.45f)
-            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    GyroBall(source, neutral, Modifier.size(ball))
-                }
-                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    CalibrateButton(calibrate)
-                }
-            }
-        } else {
-            // Portrait: stacked, ball above the button.
-            val ball = minOf(maxWidth * 0.85f, maxHeight * 0.6f)
-            Column(
-                Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                GyroBall(source, neutral, Modifier.size(ball))
-                Spacer(Modifier.height(32.dp))
-                CalibrateButton(calibrate)
-            }
+    BoxWithConstraints(Modifier.fillMaxSize().padding(16.dp)) {
+        val ball = minOf(maxWidth, maxHeight) * 0.42f
+
+        // Tap zones hug the two bottom corners; only taps inside the triangle count.
+        CornerTapZone(
+            left = true,
+            onTap = { onTap(0) },
+            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(0.42f).fillMaxHeight(0.55f),
+        )
+        CornerTapZone(
+            left = false,
+            onTap = { onTap(1) },
+            modifier = Modifier.align(Alignment.BottomEnd).fillMaxWidth(0.42f).fillMaxHeight(0.55f),
+        )
+
+        // Instructions across the top.
+        Text(
+            "Tilt the phone to steer · tap a bottom corner to act",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.outline,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+        )
+
+        // Centre gyro ball doubles as the Calibrate control.
+        Column(
+            Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            GyroBall(
+                source,
+                neutral,
+                Modifier
+                    .size(ball)
+                    .pointerInput(Unit) { detectTapGestures { calibrate() } },
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Tap the gyro to calibrate",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
 
+/**
+ * A triangular tap target hugging one bottom corner of the play screen ([left] = bottom-left, else
+ * bottom-right). The wedge fills the corner half of the composable's bounds, and only taps that land
+ * inside that triangle fire [onTap] (with a light haptic tick), so the centre stays free for the gyro.
+ */
 @Composable
-private fun CalibrateButton(onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Button(onClick = onClick, modifier = Modifier.height(64.dp).widthIn(min = 200.dp)) {
-            Text("Calibrate", style = MaterialTheme.typography.titleLarge)
+private fun CornerTapZone(left: Boolean, onTap: () -> Unit, modifier: Modifier = Modifier) {
+    val haptics = LocalHapticFeedback.current
+    val fill = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    val edge = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+    Box(
+        modifier.pointerInput(left) {
+            detectTapGestures { offset ->
+                val nx = offset.x / size.width
+                val ny = offset.y / size.height
+                // Lower-left triangle: ny >= nx; lower-right: ny >= 1 - nx.
+                val inside = if (left) ny >= nx else ny >= 1f - nx
+                if (inside) {
+                    onTap()
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            }
+        },
+        contentAlignment = if (left) Alignment.BottomStart else Alignment.BottomEnd,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val path = Path().apply {
+                if (left) {
+                    moveTo(0f, 0f)
+                    lineTo(0f, size.height)
+                    lineTo(size.width, size.height)
+                } else {
+                    moveTo(size.width, 0f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                }
+                close()
+            }
+            drawPath(path, fill)
+            drawPath(path, edge, style = Stroke(width = 2.dp.toPx()))
         }
-        Spacer(Modifier.height(8.dp))
         Text(
-            "Hold your neutral pose, then tap to set it as centre.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline,
-            textAlign = TextAlign.Center,
+            "TAP",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(18.dp),
         )
     }
 }
@@ -336,4 +421,14 @@ private fun CenteredDial(content: @Composable () -> Unit) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(Modifier.fillMaxWidth(0.7f)) { content() }
     }
+}
+
+/** Walk the context wrappers to find the hosting [Activity], for play-mode orientation locking. */
+private fun Context.findActivity(): Activity? {
+    var ctx: Context = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
