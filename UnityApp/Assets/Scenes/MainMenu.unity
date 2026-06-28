@@ -642,6 +642,11 @@ MonoBehaviour:
   m_SendPointerHoverToParent: 1
   _useInitialPressPositionForDrag: 1
   _exclusiveMode: 0
+--- !u!1 &570189759 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3104811729321801499, guid: 45677d996b4ce774a9fb5cca8e5e1bfe, type: 3}
+  m_PrefabInstance: {fileID: 2082724092}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &606994116
 GameObject:
   m_ObjectHideFlags: 0
@@ -3226,6 +3231,10 @@ PrefabInstance:
       propertyPath: cancelButton
       value: 
       objectReference: {fileID: 1683339719}
+    - target: {fileID: 3709351187374198367, guid: 45677d996b4ce774a9fb5cca8e5e1bfe, type: 3}
+      propertyPath: qrCodeConnection
+      value: 
+      objectReference: {fileID: 570189759}
     - target: {fileID: 4350594085692177889, guid: 45677d996b4ce774a9fb5cca8e5e1bfe, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: -585

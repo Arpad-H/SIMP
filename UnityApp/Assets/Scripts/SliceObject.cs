@@ -175,11 +175,34 @@ public class SliceObject : MonoBehaviour {
             upperHull.AddComponent<CutProgress>().StartCooldown(reSliceCooldown);
             lowerHull.AddComponent<CutProgress>().StartCooldown(reSliceCooldown);
 
+            // React to the tree being cut (drop its peanuts, etc.) while the trunk is still
+            // parented under the tree, so we can walk up to find what was riding on it.
+            OnTreeSliced(target);
+
             // Disable the trunk this instant so a later physics substep in the SAME frame
             // can't linecast it and slice it a second time (Destroy is deferred to end of
             // frame, so until then its collider is still live and hittable).
             target.SetActive(false);
             Destroy(target);
+        }
+    }
+
+    // Central hook for everything that should happen when a tree trunk is fully cut through.
+    // Add more reactions here later — falling-leaf particles, a tree-snap sound, score, etc.
+    private void OnTreeSliced(GameObject slicedTrunk) {
+        DropTreePeanuts(slicedTrunk);
+        // TODO: spawn falling-leaf particles, play a snap SFX, ...
+    }
+
+    // Find every peanut riding on the sliced tree and make it fall to the ground.
+    private void DropTreePeanuts(GameObject slicedTrunk) {
+        // Peanuts are spawned as children of the tree's NutSpawner (NutSpawner.parentToTree),
+        // which lives on the tree root — an ancestor of the trunk we just cut. Walk up to it.
+        NutSpawner tree = slicedTrunk.GetComponentInParent<NutSpawner>();
+        if (tree == null) return; // not a tree (e.g. re-slicing a detached half) — nothing to drop.
+
+        foreach (Peanut peanut in tree.GetComponentsInChildren<Peanut>(true)) {
+            peanut.Drop();
         }
     }
 

@@ -35,6 +35,20 @@ public class Peanut : MonoBehaviour
              "tail before the squirrel can walk away.")]
     [SerializeField] private float moveLockHold = 0.5f;
 
+    [Header("Falling")]
+    [Tooltip("Downward acceleration (m/s^2) applied while the nut drops after its tree is sliced.")]
+    [SerializeField] private float fallGravity = 9.81f;
+
+    [Tooltip("How high above the ground the nut settles, and keeps hovering, once it lands.")]
+    [SerializeField] private float groundHoverOffset = 0.4f;
+
+    [Tooltip("Layers the drop ray treats as ground. The Sliceable layer (the tree itself) is " +
+             "always ignored on top of this, so the nut falls past the fresh stump to the real ground.")]
+    [SerializeField] private LayerMask groundMask = ~0;
+
+    [Tooltip("How far below the nut to search for ground when it starts falling.")]
+    [SerializeField] private float maxFallDistance = 100f;
+
     [Header("References")]
     [Tooltip("Source of the shake signal. Found automatically in the scene if left empty.")]
     [SerializeField] private PhoneGestureDetector gestureDetector;
@@ -60,6 +74,10 @@ public class Peanut : MonoBehaviour
     private float eatProgress;
     private bool eaten;
     private bool squirrelInRange;
+
+    private bool falling;        // true while dropping to the ground after the tree was sliced
+    private float fallVelocity;  // current downward speed during the drop
+    private float groundY;       // world Y the nut settles (and then hovers) at once it lands
 
     private SquirrelController squirrel; // the squirrel currently in range (captured on enter)
     private bool isEating;               // true while the squirrel is frozen for this stretch
@@ -92,7 +110,7 @@ public class Peanut : MonoBehaviour
 
     private void Update()
     {
-        Hover();
+        UpdateMotion();
 
         // Progress only on frames the phone is actually shaking and the squirrel is in range.
         bool shakingNow = squirrelInRange && !eaten &&
@@ -113,12 +131,75 @@ public class Peanut : MonoBehaviour
         SetEating(lockMovement);
     }
 
-    // Idle motion: bob up and down on a sine wave and spin slowly in place.
-    private void Hover()
+    // Per-frame motion. Always spins. While hovering it bobs around its anchor; while falling
+    // (after the tree was sliced) it drops straight down and then resumes hovering where it lands.
+    private void UpdateMotion()
     {
+        transform.Rotate(Vector3.up * (rotationSpeed * Time.deltaTime));
+
+        if (falling)
+        {
+            FallTowardsGround();
+            return;
+        }
+
+        // Bob up and down on a sine wave around the anchor (its spawn spot, or where it landed).
         float newY = startPosition.y + Mathf.Sin(Time.time * floatSpeed) * floatAmplitude;
         transform.position = new Vector3(startPosition.x, newY, startPosition.z);
-        transform.Rotate(Vector3.up * (rotationSpeed * Time.deltaTime));
+    }
+
+    /// <summary>
+    /// Make this nut drop straight down to the ground and then keep floating where it lands.
+    /// Called when the tree it was sitting on gets sliced. No-op if it's already falling or eaten.
+    /// </summary>
+    public void Drop()
+    {
+        if (falling || eaten)
+            return;
+
+        // It has fallen off the tree — detach so it becomes a free world object (surviving any later
+        // teardown of the tree) and hovers in world space from here on. Keep its current world pose.
+        transform.SetParent(null, true);
+
+        // Look for ground straight below. Ignore triggers (our own eat-range collider and other
+        // nuts') and the Sliceable layer, so we drop past the freshly cut stump to the real ground.
+        int mask = groundMask;
+        int sliceableLayer = LayerMask.NameToLayer("Sliceable");
+        if (sliceableLayer >= 0)
+            mask &= ~(1 << sliceableLayer);
+
+        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit,
+                            maxFallDistance, mask, QueryTriggerInteraction.Ignore))
+        {
+            groundY = hit.point.y + groundHoverOffset;
+            falling = true;
+            fallVelocity = 0f;
+        }
+        else
+        {
+            // No ground found below — just keep hovering where we are rather than fall forever.
+            startPosition = transform.position;
+        }
+    }
+
+    // One frame of the drop: accelerate downward, and once we reach the ground re-anchor the
+    // hover to the landing spot and switch back to floating.
+    private void FallTowardsGround()
+    {
+        fallVelocity += fallGravity * Time.deltaTime;
+
+        Vector3 pos = transform.position;
+        pos.y -= fallVelocity * Time.deltaTime;
+
+        if (pos.y <= groundY)
+        {
+            pos.y = groundY;
+            startPosition = pos;   // float around where it landed from now on
+            falling = false;
+            fallVelocity = 0f;
+        }
+
+        transform.position = pos;
     }
 
     /// <summary>
