@@ -1,6 +1,8 @@
 ﻿<Solution>
+  <Project Path="AmplifyImpostors.Editor.csproj" />
   <Project Path="AllIn13DShaderAssemebly.Editor.csproj" />
   <Project Path="AllIn13DShaderDemoScriptsAssembly.csproj" />
+  <Project Path="AmplifyImpostors.Runtime.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="AllIn13DShaderAssemebly.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
