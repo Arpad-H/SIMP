@@ -13810,7 +13810,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2662663139574317706, guid: fde1d2c83f3f41b42ba66903f0cc2236, type: 3}
       propertyPath: cutForce
-      value: 0.1
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2662663139574317706, guid: fde1d2c83f3f41b42ba66903f0cc2236, type: 3}
       propertyPath: timeToCut
@@ -13826,7 +13826,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2662663139574317706, guid: fde1d2c83f3f41b42ba66903f0cc2236, type: 3}
       propertyPath: slicedPieceMass
-      value: 10000
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 2662663139574317706, guid: fde1d2c83f3f41b42ba66903f0cc2236, type: 3}
       propertyPath: depthMaskMaterial
