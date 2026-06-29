@@ -227,7 +227,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6483940091875780780}
   - component: {fileID: 1962755945162005133}
-  - component: {fileID: 5253958467059272999}
   m_Layer: 0
   m_Name: SM_Tree_D_02_WIP
   m_TagString: Untagged
@@ -286,34 +285,6 @@ MonoBehaviour:
   - {fileID: 4330879821848854310}
   - {fileID: 5147413675538132269}
   nutPrefab: {fileID: 6887891269569192929, guid: 9a01c6b81681fe546a071672ccd3c1e9, type: 3}
-  minNuts: 1
-  maxNuts: 7
-  parentToTree: 1
-  seed: 0
---- !u!114 &5253958467059272999
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5958338747154772502}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0133dd00398b1154ea4ef24b799a92b1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NutSpawner
-  spawnPoints:
-  - {fileID: 2591791582026654281}
-  - {fileID: 2475560182091467402}
-  - {fileID: 2410663338206359172}
-  - {fileID: 8577064929834590084}
-  - {fileID: 3738467989984107934}
-  - {fileID: 4204397133653996729}
-  - {fileID: 3620583241252248364}
-  - {fileID: 3150843559654235599}
-  - {fileID: 4330879821848854310}
-  - {fileID: 5147413675538132269}
-  nutPrefab: {fileID: 0}
   minNuts: 1
   maxNuts: 7
   parentToTree: 1

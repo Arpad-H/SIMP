@@ -57,6 +57,21 @@ public class Peanut : MonoBehaviour
              "to the fill image's GameObject if left empty.")]
     [SerializeField] private GameObject eatProgressUI;
 
+    [Header("Outline Highlight")]
+    [Tooltip("While the squirrel is in range to eat, the nut's outline is tinted to this colour, then " +
+             "reverts to its original colour once the squirrel leaves. Only the outline COLOUR changes " +
+             "— the outline type (e.g. Fade With Distance), thickness, etc. are left untouched.")]
+    [SerializeField] private Color inRangeOutlineColor = Color.green;
+
+    [Tooltip("Keep the original outline colour's alpha when highlighting, so the green matches the " +
+             "existing fade strength and only the hue changes. Turn off to use the highlight colour's " +
+             "own alpha.")]
+    [SerializeField] private bool preserveOutlineAlpha = true;
+
+    [Tooltip("Renderer whose material's outline colour is tinted. Auto-found (first child mesh " +
+             "renderer) if left empty.")]
+    [SerializeField] private Renderer outlineRenderer;
+
     [Header("Events")]
     [Tooltip("Fired once when the nut has been fully eaten (hook up score, SFX, VFX, ...).")]
     public UnityEvent onEaten;
@@ -82,6 +97,14 @@ public class Peanut : MonoBehaviour
     private bool hasDropped;  // has fallen off its tree, so the lumberjack can now collect it
     private bool squirrelInRange;
 
+    // Outline highlight: we recolour an instanced copy of the material so one nut's highlight never
+    // touches the shared asset or any other nut. originalOutlineColor is captured once at Awake and
+    // restored when the squirrel leaves.
+    private static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
+    private Material outlineMaterial;
+    private Color originalOutlineColor;
+    private bool hasOutlineColor;
+
     private bool falling;        // true while dropping to the ground after the tree was sliced
     private float fallVelocity;  // current downward speed during the drop
     private float groundY;       // world Y the nut settles (and then hovers) at once it lands
@@ -89,6 +112,7 @@ public class Peanut : MonoBehaviour
     private void Awake()
     {
         EnsureTriggerCollider();
+        CacheOutlineMaterial();
 
         if (oscReceiver == null)
         {
@@ -116,8 +140,9 @@ public class Peanut : MonoBehaviour
         if (oscReceiver != null)
             oscReceiver.OnTap -= HandleTap;
 
-        // Don't leave the progress bar showing if we're disabled mid-bite.
+        // Don't leave the progress bar showing — or the outline tinted — if we're disabled mid-bite.
         ShowEatProgress(false);
+        SetOutlineHighlight(false);
     }
 
     private void Start()
@@ -269,6 +294,51 @@ public class Peanut : MonoBehaviour
             UpdateEatProgressVisual(eatProgress);
     }
 
+    // Grabs an instanced copy of the outline material and remembers its starting outline colour, so
+    // the in-range highlight can swap to green and back without ever touching the shared asset.
+    private void CacheOutlineMaterial()
+    {
+        if (outlineRenderer == null)
+            outlineRenderer = GetComponentInChildren<MeshRenderer>();
+
+        if (outlineRenderer == null)
+            return;
+
+        // Accessing .material instantiates a per-renderer copy, so recolouring this nut never affects
+        // the shared M_Peanut asset or any other nut using it.
+        Material mat = outlineRenderer.material;
+        if (mat == null || !mat.HasProperty(OutlineColorId))
+        {
+            Debug.LogWarning($"{nameof(Peanut)} '{name}': the outline renderer's material has no " +
+                             "'_OutlineColor' property, so the in-range outline highlight is disabled.", this);
+            return;
+        }
+
+        outlineMaterial = mat;
+        originalOutlineColor = mat.GetColor(OutlineColorId);
+        hasOutlineColor = true;
+    }
+
+    // Tints the outline to the in-range colour, or restores the original. Optionally keeps the
+    // original alpha so only the hue changes and the fade strength stays the same.
+    private void SetOutlineHighlight(bool highlighted)
+    {
+        if (!hasOutlineColor)
+            return;
+
+        if (!highlighted)
+        {
+            outlineMaterial.SetColor(OutlineColorId, originalOutlineColor);
+            return;
+        }
+
+        Color highlight = inRangeOutlineColor;
+        if (preserveOutlineAlpha)
+            highlight.a = originalOutlineColor.a;
+
+        outlineMaterial.SetColor(OutlineColorId, highlight);
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (other.GetComponentInParent<SquirrelController>() == null)
@@ -276,7 +346,10 @@ public class Peanut : MonoBehaviour
 
         squirrelInRange = true;
         if (!Consumed)
+        {
             ShowEatProgress(true);
+            SetOutlineHighlight(true);
+        }
     }
 
     private void OnTriggerExit(Collider other)
@@ -286,6 +359,7 @@ public class Peanut : MonoBehaviour
 
         squirrelInRange = false;
         ShowEatProgress(false);
+        SetOutlineHighlight(false);
     }
 
     private void OnDestroy()
