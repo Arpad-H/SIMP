@@ -261,7 +261,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: minNuts
@@ -423,7 +423,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: minNuts
@@ -1327,7 +1327,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 797486124560945044, guid: 19e951f1b3b89df4290587f7ab123c10, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 797486124560945044, guid: 19e951f1b3b89df4290587f7ab123c10, type: 3}
       propertyPath: minNuts
@@ -1406,7 +1406,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6325063915299328714, guid: a1658003e31053745829ecb5a5911c93, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6325063915299328714, guid: a1658003e31053745829ecb5a5911c93, type: 3}
       propertyPath: minNuts
@@ -3189,7 +3189,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1329957093412784183, guid: bba6161290491154196e9a8bc28fa544, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 1329957093412784183, guid: bba6161290491154196e9a8bc28fa544, type: 3}
       propertyPath: minNuts
@@ -3734,7 +3734,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5320033244293315059, guid: cacc78c67ea7af643bdc21cf25c87b58, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 5320033244293315059, guid: cacc78c67ea7af643bdc21cf25c87b58, type: 3}
       propertyPath: minNuts
@@ -4561,7 +4561,7 @@ RectTransform:
   m_GameObject: {fileID: 691691998}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 4.5033, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1128306484}
@@ -4584,7 +4584,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.0037735105, g: 0.0037677505, b: 0.003752151, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.7176471}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5340,7 +5340,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4832473572419494089, guid: dc8650694e2c2cf4aa2d67f14837b9ac, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 4832473572419494089, guid: dc8650694e2c2cf4aa2d67f14837b9ac, type: 3}
       propertyPath: minNuts
@@ -5978,7 +5978,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: minNuts
@@ -6782,7 +6782,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6325063915299328714, guid: a1658003e31053745829ecb5a5911c93, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6325063915299328714, guid: a1658003e31053745829ecb5a5911c93, type: 3}
       propertyPath: minNuts
@@ -7251,7 +7251,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: minNuts
@@ -7872,16 +7872,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1128306483}
-  m_LocalRotation: {x: -0.5, y: 0.5, z: -0.5, w: -0.5}
+  m_LocalRotation: {x: 0.5000002, y: -0.5000002, z: -0.49999988, w: -0.49999988}
   m_LocalPosition: {x: 0, y: 0, z: -0.069999695}
-  m_LocalScale: {x: 0.001, y: 0.001, z: 0.001}
+  m_LocalScale: {x: -0.001, y: 0.001, z: 0.001}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 691691999}
   - {fileID: 1813838969}
   - {fileID: 1741490371}
   m_Father: {fileID: 1221006758}
-  m_LocalEulerAnglesHint: {x: -270, y: 0, z: 90}
+  m_LocalEulerAnglesHint: {x: -450, y: 0, z: 90}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: -0.0000027418137, y: 0.01999998}
@@ -8869,7 +8869,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7979705642176276772, guid: 7fee3246c86876f4491e35ad453c2b47, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 7979705642176276772, guid: 7fee3246c86876f4491e35ad453c2b47, type: 3}
       propertyPath: minNuts
@@ -9652,7 +9652,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7979705642176276772, guid: 7fee3246c86876f4491e35ad453c2b47, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 7979705642176276772, guid: 7fee3246c86876f4491e35ad453c2b47, type: 3}
       propertyPath: minNuts
@@ -9742,7 +9742,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: minNuts
@@ -9863,7 +9863,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: minNuts
@@ -9937,7 +9937,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5320033244293315059, guid: cacc78c67ea7af643bdc21cf25c87b58, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 5320033244293315059, guid: cacc78c67ea7af643bdc21cf25c87b58, type: 3}
       propertyPath: minNuts
@@ -10541,7 +10541,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: minNuts
@@ -10677,7 +10677,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1962755945162005133, guid: 7b2c7476fc47b0f4b9d25fa49e7d19a6, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 1962755945162005133, guid: 7b2c7476fc47b0f4b9d25fa49e7d19a6, type: 3}
       propertyPath: minNuts
@@ -15671,7 +15671,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7930768475532928434, guid: fef38b3f56d45c34ba56c964fc60db2f, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 7930768475532928434, guid: fef38b3f56d45c34ba56c964fc60db2f, type: 3}
       propertyPath: minNuts
@@ -15698,7 +15698,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4832473572419494089, guid: dc8650694e2c2cf4aa2d67f14837b9ac, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 4832473572419494089, guid: dc8650694e2c2cf4aa2d67f14837b9ac, type: 3}
       propertyPath: minNuts
@@ -16342,7 +16342,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5320033244293315059, guid: cacc78c67ea7af643bdc21cf25c87b58, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 5320033244293315059, guid: cacc78c67ea7af643bdc21cf25c87b58, type: 3}
       propertyPath: minNuts
@@ -16407,7 +16407,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4832473572419494089, guid: dc8650694e2c2cf4aa2d67f14837b9ac, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 4832473572419494089, guid: dc8650694e2c2cf4aa2d67f14837b9ac, type: 3}
       propertyPath: minNuts
@@ -16657,11 +16657,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: maxNuts
-      value: 1
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6830831115415091420, guid: b6ef213254f21034ab1465008e07642c, type: 3}
       propertyPath: minNuts
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -16678,7 +16678,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 6325063915299328714, guid: a1658003e31053745829ecb5a5911c93, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 6325063915299328714, guid: a1658003e31053745829ecb5a5911c93, type: 3}
       propertyPath: minNuts
@@ -16928,7 +16928,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1329957093412784183, guid: bba6161290491154196e9a8bc28fa544, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 1329957093412784183, guid: bba6161290491154196e9a8bc28fa544, type: 3}
       propertyPath: minNuts
@@ -16949,7 +16949,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1962755945162005133, guid: 7b2c7476fc47b0f4b9d25fa49e7d19a6, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 1962755945162005133, guid: 7b2c7476fc47b0f4b9d25fa49e7d19a6, type: 3}
       propertyPath: minNuts
@@ -17058,7 +17058,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7930768475532928434, guid: fef38b3f56d45c34ba56c964fc60db2f, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 7930768475532928434, guid: fef38b3f56d45c34ba56c964fc60db2f, type: 3}
       propertyPath: minNuts
@@ -17123,7 +17123,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 8898004556113064355, guid: bd2b3cb76800d0642847aad320c2eee3, type: 3}
       propertyPath: minNuts
@@ -17188,7 +17188,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7979705642176276772, guid: 7fee3246c86876f4491e35ad453c2b47, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 7979705642176276772, guid: 7fee3246c86876f4491e35ad453c2b47, type: 3}
       propertyPath: minNuts
@@ -17209,7 +17209,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 797486124560945044, guid: 19e951f1b3b89df4290587f7ab123c10, type: 3}
       propertyPath: maxNuts
-      value: 0
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 797486124560945044, guid: 19e951f1b3b89df4290587f7ab123c10, type: 3}
       propertyPath: minNuts
